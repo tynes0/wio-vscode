@@ -16,6 +16,7 @@
   "activationEvents": [
     "onLanguage:wio",
     "onCommand:wio.checkCurrentFile",
+    "onCommand:wio.runCurrentFile",
     "onCommand:wio.emitCppCurrentFile",
     "onCommand:wio.showBackendInfoCurrentFile",
     "onCommand:wio.clearDiagnostics"
@@ -31,7 +32,11 @@
         "extensions": [
           ".wio"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./assets/wio-file-light.svg",
+          "dark": "./assets/wio-file-dark.svg"
+        }
       }
     ],
     "grammars": [
@@ -50,19 +55,33 @@
     "commands": [
       {
         "command": "wio.checkCurrentFile",
-        "title": "Wio: Check Current File"
+        "title": "Check Current File",
+        "category": "Wio",
+        "icon": "$(check)"
+      },
+      {
+        "command": "wio.runCurrentFile",
+        "title": "Run Current File",
+        "category": "Wio",
+        "icon": "$(play)"
       },
       {
         "command": "wio.emitCppCurrentFile",
-        "title": "Wio: Emit Generated C++"
+        "title": "Emit Generated C++",
+        "category": "Wio",
+        "icon": "$(file-code)"
       },
       {
         "command": "wio.showBackendInfoCurrentFile",
-        "title": "Wio: Show Backend Info"
+        "title": "Show Backend Info",
+        "category": "Wio",
+        "icon": "$(tools)"
       },
       {
         "command": "wio.clearDiagnostics",
-        "title": "Wio: Clear Diagnostics"
+        "title": "Clear Diagnostics",
+        "category": "Wio",
+        "icon": "$(clear-all)"
       }
     ],
     "configuration": {
@@ -95,10 +114,66 @@
           "type": "boolean",
           "default": false,
           "description": "Reveal the Wio output channel even when a command succeeds."
+        },
+        "wio.runArgs": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Extra arguments appended after `--run` when running the current Wio file."
         }
       }
     },
+    "keybindings": [
+      {
+        "command": "wio.checkCurrentFile",
+        "key": "ctrl+alt+w",
+        "mac": "cmd+alt+w",
+        "when": "editorLangId == wio && editorTextFocus"
+      },
+      {
+        "command": "wio.runCurrentFile",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorLangId == wio && editorTextFocus"
+      },
+      {
+        "command": "wio.emitCppCurrentFile",
+        "key": "ctrl+alt+e",
+        "mac": "cmd+alt+e",
+        "when": "editorLangId == wio && editorTextFocus"
+      },
+      {
+        "command": "wio.showBackendInfoCurrentFile",
+        "key": "ctrl+alt+b",
+        "mac": "cmd+alt+b",
+        "when": "editorLangId == wio && editorTextFocus"
+      }
+    ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "wio.checkCurrentFile",
+          "when": "editorLangId == wio"
+        },
+        {
+          "command": "wio.runCurrentFile",
+          "when": "editorLangId == wio"
+        },
+        {
+          "command": "wio.emitCppCurrentFile",
+          "when": "editorLangId == wio"
+        },
+        {
+          "command": "wio.showBackendInfoCurrentFile",
+          "when": "editorLangId == wio"
+        },
+        {
+          "command": "wio.clearDiagnostics",
+          "when": "editorLangId == wio"
+        }
+      ],
       "editor/title": [
         {
           "command": "wio.checkCurrentFile",
@@ -106,9 +181,14 @@
           "group": "navigation@100"
         },
         {
-          "command": "wio.emitCppCurrentFile",
+          "command": "wio.runCurrentFile",
           "when": "resourceExtname == .wio",
           "group": "navigation@101"
+        },
+        {
+          "command": "wio.emitCppCurrentFile",
+          "when": "resourceExtname == .wio",
+          "group": "navigation@102"
         }
       ]
     }

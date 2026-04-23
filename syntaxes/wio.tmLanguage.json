@@ -3,36 +3,23 @@
   "name": "Wio",
   "scopeName": "source.wio",
   "patterns": [
-    {
-      "include": "#comments"
-    },
-    {
-      "include": "#attributes"
-    },
-    {
-      "include": "#strings"
-    },
-    {
-      "include": "#numbers"
-    },
-    {
-      "include": "#constants"
-    },
-    {
-      "include": "#keywords"
-    },
-    {
-      "include": "#types"
-    },
-    {
-      "include": "#realmAndModules"
-    },
-    {
-      "include": "#declarations"
-    },
-    {
-      "include": "#calls"
-    }
+    { "include": "#comments" },
+    { "include": "#attributes" },
+    { "include": "#useStatements" },
+    { "include": "#interpolatedStrings" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#constants" },
+    { "include": "#keywords" },
+    { "include": "#primitiveTypes" },
+    { "include": "#declarationKeywords" },
+    { "include": "#typeAliasDeclarations" },
+    { "include": "#genericFunctionDeclarations" },
+    { "include": "#typeDeclarations" },
+    { "include": "#modulePathAccess" },
+    { "include": "#genericParameterReferences" },
+    { "include": "#functionCalls" },
+    { "include": "#typeUsages" }
   ],
   "repository": {
     "comments": {
@@ -41,9 +28,7 @@
           "name": "comment.line.double-slash.wio",
           "begin": "//",
           "beginCaptures": {
-            "0": {
-              "name": "punctuation.definition.comment.wio"
-            }
+            "0": { "name": "punctuation.definition.comment.wio" }
           },
           "end": "$\\n?"
         },
@@ -51,15 +36,11 @@
           "name": "comment.block.wio",
           "begin": "/\\*",
           "beginCaptures": {
-            "0": {
-              "name": "punctuation.definition.comment.begin.wio"
-            }
+            "0": { "name": "punctuation.definition.comment.begin.wio" }
           },
           "end": "\\*/",
           "endCaptures": {
-            "0": {
-              "name": "punctuation.definition.comment.end.wio"
-            }
+            "0": { "name": "punctuation.definition.comment.end.wio" }
           }
         }
       ]
@@ -72,42 +53,120 @@
         }
       ]
     },
-    "strings": {
+    "useStatements": {
       "patterns": [
         {
-          "name": "string.quoted.double.wio",
-          "begin": "\\$?\"",
+          "name": "meta.use.wio",
+          "begin": "\\buse\\b",
+          "beginCaptures": {
+            "0": { "name": "keyword.control.import.wio" }
+          },
+          "end": ";",
+          "endCaptures": {
+            "0": { "name": "punctuation.terminator.statement.wio" }
+          },
+          "patterns": [
+            {
+              "name": "keyword.control.import.wio",
+              "match": "\\bas\\b"
+            },
+            {
+              "name": "entity.name.alias.wio",
+              "match": "(?<=\\bas\\s+)[A-Za-z_][A-Za-z0-9_]*"
+            },
+            { "include": "#modulePathAccess" }
+          ]
+        }
+      ]
+    },
+    "interpolatedStrings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.interpolated.wio",
+          "begin": "\\$\"",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.wio" }
+          },
           "end": "\"",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.wio" }
+          },
           "patterns": [
             {
               "name": "constant.character.escape.wio",
               "match": "\\\\."
             },
+            { "include": "#interpolationBlocks" },
             {
-              "name": "meta.interpolation.wio",
-              "begin": "\\$\\{",
-              "end": "\\}",
-              "patterns": [
-                {
-                  "include": "#numbers"
-                },
-                {
-                  "include": "#keywords"
-                },
-                {
-                  "include": "#types"
-                },
-                {
-                  "include": "#calls"
-                }
-              ]
+              "name": "string.quoted.double.interpolated.content.wio",
+              "match": "[^\\\\$\"]+|\\$(?!\\{)"
+            }
+          ]
+        }
+      ]
+    },
+    "interpolationBlocks": {
+      "patterns": [
+        {
+          "name": "meta.interpolation.wio",
+          "begin": "\\$\\{",
+          "beginCaptures": {
+            "0": { "name": "punctuation.section.interpolation.begin.wio" }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": { "name": "punctuation.section.interpolation.end.wio" }
+          },
+          "patterns": [
+            { "include": "#comments" },
+            { "include": "#attributes" },
+            { "include": "#interpolatedStrings" },
+            { "include": "#strings" },
+            { "include": "#numbers" },
+            { "include": "#constants" },
+            { "include": "#keywords" },
+            { "include": "#primitiveTypes" },
+            { "include": "#declarationKeywords" },
+            { "include": "#typeAliasDeclarations" },
+            { "include": "#genericFunctionDeclarations" },
+            { "include": "#typeDeclarations" },
+            { "include": "#modulePathAccess" },
+            { "include": "#genericParameterReferences" },
+            { "include": "#functionCalls" },
+            { "include": "#typeUsages" }
+          ]
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.wio",
+          "begin": "\"",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.wio" }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.wio" }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.wio",
+              "match": "\\\\."
             }
           ]
         },
         {
           "name": "string.quoted.single.wio",
           "begin": "'",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.wio" }
+          },
           "end": "'",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.wio" }
+          },
           "patterns": [
             {
               "name": "constant.character.escape.wio",
@@ -121,7 +180,7 @@
       "patterns": [
         {
           "name": "constant.numeric.wio",
-          "match": "\\b\\d+(?:\\.\\d+)?(?:[iu](?:8|16|32|64|size)|f(?:32|64))?\\b"
+          "match": "\\b\\d+(?:\\.\\d+)?(?:f(?:32|64)?|[iu](?:8|16|32|64|size))?\\b"
         }
       ]
     },
@@ -145,15 +204,11 @@
         },
         {
           "name": "keyword.control.flow.wio",
-          "match": "\\b(?:if|else|while|for|foreach|match|when|return|break|continue|and|or|not|is|fit|every|after|during|wait|async|await|coroutine|yield|thread|loop|system|program)\\b"
+          "match": "\\b(?:if|else|while|for|foreach|in|match|when|return|break|continue|and|or|not|is|fit|every|after|during|wait|async|await|coroutine|yield|thread|loop|system|program)\\b"
         },
         {
           "name": "storage.modifier.wio",
           "match": "\\b(?:let|mut|const|ref|view|public|private|protected)\\b"
-        },
-        {
-          "name": "storage.type.declaration.wio",
-          "match": "\\b(?:fn|object|component|interface|enum|flagset|flag)\\b"
         },
         {
           "name": "variable.language.wio",
@@ -161,7 +216,7 @@
         }
       ]
     },
-    "types": {
+    "primitiveTypes": {
       "patterns": [
         {
           "name": "support.type.primitive.wio",
@@ -169,65 +224,126 @@
         }
       ]
     },
-    "realmAndModules": {
+    "declarationKeywords": {
       "patterns": [
         {
-          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)(::)",
+          "name": "storage.type.declaration.wio",
+          "match": "\\b(?:fn|object|component|interface|enum|flagset|flag|type)\\b"
+        }
+      ]
+    },
+    "typeAliasDeclarations": {
+      "patterns": [
+        {
+          "match": "\\b(type)\\s+([A-Za-z_][A-Za-z0-9_]*)",
           "captures": {
-            "1": {
-              "name": "entity.name.namespace.wio"
+            "1": { "name": "storage.type.declaration.wio" },
+            "2": { "name": "entity.name.type.alias.wio" }
+          }
+        }
+      ]
+    },
+    "genericFunctionDeclarations": {
+      "patterns": [
+        {
+          "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.type.function.wio" },
+            "2": { "name": "entity.name.function.wio" }
+          }
+        }
+      ]
+    },
+    "typeDeclarations": {
+      "patterns": [
+        {
+          "match": "\\b(realm)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.control.import.wio" },
+            "2": { "name": "entity.name.namespace.wio" }
+          }
+        },
+        {
+          "match": "\\b(object|component|interface|enum|flagset|flag)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.type.declaration.wio" },
+            "2": { "name": "entity.name.type.wio" }
+          }
+        }
+      ]
+    },
+    "modulePathAccess": {
+      "patterns": [
+        {
+          "name": "meta.path.wio",
+          "begin": "\\b(?=[A-Za-z_][A-Za-z0-9_]*::)",
+          "end": "(?=[^A-Za-z0-9_:]|$)",
+          "patterns": [
+            {
+              "name": "entity.name.namespace.wio",
+              "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=::)"
             },
-            "2": {
-              "name": "punctuation.separator.namespace.wio"
+            {
+              "name": "variable.other.member.wio",
+              "match": "(?<=::)[A-Za-z_][A-Za-z0-9_]*\\b"
+            },
+            {
+              "name": "punctuation.separator.namespace.wio",
+              "match": "::"
             }
+          ]
+        }
+      ]
+    },
+    "genericParameterReferences": {
+      "patterns": [
+        {
+          "name": "entity.name.type.parameter.wio",
+          "match": "(?<=<|,|\\(|:|->)\\s*[A-Z][A-Za-z0-9_]*(?!\\s*<)(?=\\s*(?:\\[\\]|,|>|\\)|;|=|\\{|$))"
+        }
+      ]
+    },
+    "functionCalls": {
+      "patterns": [
+        {
+          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)(\\s*<[^>]+>)?(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "support.function.wio" },
+            "2": { "name": "meta.generic.arguments.wio" }
+          }
+        },
+        {
+          "match": "\\.([A-Za-z_][A-Za-z0-9_]*)(\\s*<[^>]+>)?(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "support.function.method.wio" },
+            "2": { "name": "meta.generic.arguments.wio" }
           }
         }
       ]
     },
-    "declarations": {
+    "typeUsages": {
       "patterns": [
         {
-          "match": "\\bfn\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "match": "(:)\\s*([A-Za-z_][A-Za-z0-9_]*)(\\s*<[^>]+>)?",
           "captures": {
-            "1": {
-              "name": "entity.name.function.wio"
-            }
+            "1": { "name": "punctuation.separator.type.wio" },
+            "2": { "name": "support.type.user.wio" },
+            "3": { "name": "meta.generic.arguments.wio" }
           }
         },
         {
-          "match": "\\b(?:object|component|interface|enum|flagset|flag|realm)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "match": "(->)\\s*([A-Za-z_][A-Za-z0-9_]*)(\\s*<[^>]+>)?",
           "captures": {
-            "1": {
-              "name": "entity.name.type.wio"
-            }
+            "1": { "name": "storage.modifier.arrow.wio" },
+            "2": { "name": "support.type.user.wio" },
+            "3": { "name": "meta.generic.arguments.wio" }
           }
         },
         {
-          "match": "\\b(?:let|mut|const)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "match": "\\b([A-Z][A-Za-z0-9_]*)(\\s*<[^>]+>)?",
           "captures": {
-            "1": {
-              "name": "variable.other.definition.wio"
-            }
-          }
-        }
-      ]
-    },
-    "calls": {
-      "patterns": [
-        {
-          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\()",
-          "captures": {
-            "1": {
-              "name": "support.function.wio"
-            }
-          }
-        },
-        {
-          "match": "\\.([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\()",
-          "captures": {
-            "1": {
-              "name": "support.function.method.wio"
-            }
+            "1": { "name": "support.type.user.wio" },
+            "2": { "name": "meta.generic.arguments.wio" }
           }
         }
       ]
