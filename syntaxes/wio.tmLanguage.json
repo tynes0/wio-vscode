@@ -1,0 +1,95 @@
+﻿{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Wio",
+  "scopeName": "source.wio",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.wio",
+          "begin": "//",
+          "beginCaptures": { "0": { "name": "punctuation.definition.comment.wio" } },
+          "end": "$\\n?"
+        },
+        {
+          "name": "comment.block.wio",
+          "begin": "/\\*",
+          "beginCaptures": { "0": { "name": "punctuation.definition.comment.begin.wio" } },
+          "end": "\\*/",
+          "endCaptures": { "0": { "name": "punctuation.definition.comment.end.wio" } }
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.wio",
+          "begin": "\\$?\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.wio",
+              "match": "\\\\."
+            },
+            {
+              "name": "meta.interpolation.wio",
+              "begin": "\\$\\{",
+              "end": "\\}",
+              "patterns": [
+                { "include": "#numbers" },
+                { "include": "#keywords" },
+                { "include": "#types" }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.wio",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.wio",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.wio",
+          "match": "\\b\\d+(?:\\.\\d+)?(?:[iu](?:8|16|32|64|size)|f(?:32|64))?\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.wio",
+          "match": "\\b(?:use|as|realm|fn|if|else|while|for|foreach|match|when|return|break|continue|let|mut|const|ref|view|fit|is|and|or|not|self|super|public|private|protected|object|component|interface|enum|flagset|flag)\\b"
+        },
+        {
+          "name": "storage.modifier.attribute.wio",
+          "match": "@[A-Za-z_][A-Za-z0-9_]*"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.wio",
+          "match": "\\b(?:i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|isize|usize|byte|bool|char|uchar|string|void|object)\\b"
+        }
+      ]
+    }
+  }
+}

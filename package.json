@@ -1,0 +1,31 @@
+﻿{
+  "name": "wio-vscode",
+  "displayName": "Wio",
+  "description": "Basic VS Code language support for Wio.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "wio",
+        "aliases": ["Wio", "wio"],
+        "extensions": [".wio"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "wio",
+        "scopeName": "source.wio",
+        "path": "./syntaxes/wio.tmLanguage.json"
+      }
+    ]
+  }
+}
