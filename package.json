@@ -1,22 +1,36 @@
-﻿{
+{
   "name": "wio-vscode",
   "displayName": "Wio",
-  "description": "Basic VS Code language support for Wio.",
+  "description": "VS Code support for the Wio language.",
   "version": "0.0.1",
   "publisher": "local",
   "license": "UNLICENSED",
+  "main": "./src/extension.js",
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Snippets"
+  ],
+  "activationEvents": [
+    "onLanguage:wio",
+    "onCommand:wio.checkCurrentFile",
+    "onCommand:wio.emitCppCurrentFile",
+    "onCommand:wio.showBackendInfoCurrentFile",
+    "onCommand:wio.clearDiagnostics"
   ],
   "contributes": {
     "languages": [
       {
         "id": "wio",
-        "aliases": ["Wio", "wio"],
-        "extensions": [".wio"],
+        "aliases": [
+          "Wio",
+          "wio"
+        ],
+        "extensions": [
+          ".wio"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -26,6 +40,84 @@
         "scopeName": "source.wio",
         "path": "./syntaxes/wio.tmLanguage.json"
       }
-    ]
-  }
+    ],
+    "snippets": [
+      {
+        "language": "wio",
+        "path": "./snippets/wio.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "wio.checkCurrentFile",
+        "title": "Wio: Check Current File"
+      },
+      {
+        "command": "wio.emitCppCurrentFile",
+        "title": "Wio: Emit Generated C++"
+      },
+      {
+        "command": "wio.showBackendInfoCurrentFile",
+        "title": "Wio: Show Backend Info"
+      },
+      {
+        "command": "wio.clearDiagnostics",
+        "title": "Wio: Clear Diagnostics"
+      }
+    ],
+    "configuration": {
+      "title": "Wio",
+      "properties": {
+        "wio.executable": {
+          "type": "string",
+          "default": "wio",
+          "description": "Path or command name for the Wio compiler executable."
+        },
+        "wio.defaultArgs": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Default extra arguments passed to every Wio compiler invocation."
+        },
+        "wio.enableDiagnosticsOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run `wio --dry-run` for the current Wio file after save."
+        },
+        "wio.enableDiagnosticsOnOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run `wio --dry-run` for the current Wio file when it is opened."
+        },
+        "wio.showOutputOnSuccess": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reveal the Wio output channel even when a command succeeds."
+        }
+      }
+    },
+    "menus": {
+      "editor/title": [
+        {
+          "command": "wio.checkCurrentFile",
+          "when": "resourceExtname == .wio",
+          "group": "navigation@100"
+        },
+        {
+          "command": "wio.emitCppCurrentFile",
+          "when": "resourceExtname == .wio",
+          "group": "navigation@101"
+        }
+      ]
+    }
+  },
+  "keywords": [
+    "wio",
+    "language",
+    "compiler",
+    "interop",
+    "scripting"
+  ]
 }

@@ -6,8 +6,10 @@
     { "include": "#comments" },
     { "include": "#strings" },
     { "include": "#numbers" },
+    { "include": "#constants" },
     { "include": "#keywords" },
-    { "include": "#types" }
+    { "include": "#types" },
+    { "include": "#declarations" }
   ],
   "repository": {
     "comments": {
@@ -71,11 +73,23 @@
         }
       ]
     },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.wio",
+          "match": "\\b(?:true|false)\\b"
+        },
+        {
+          "name": "keyword.control.default.wio",
+          "match": "\\bassumed\\b"
+        }
+      ]
+    },
     "keywords": {
       "patterns": [
         {
           "name": "keyword.control.wio",
-          "match": "\\b(?:use|as|realm|fn|if|else|while|for|foreach|match|when|return|break|continue|let|mut|const|ref|view|fit|is|and|or|not|self|super|public|private|protected|object|component|interface|enum|flagset|flag)\\b"
+          "match": "\\b(?:use|as|realm|fn|if|else|while|for|foreach|match|when|return|break|continue|let|mut|const|ref|view|fit|is|and|or|not|self|super|public|private|protected|object|component|interface|enum|flagset|flag|every|after|during|wait|async|await|coroutine|yield|thread|loop|system|program)\\b"
         },
         {
           "name": "storage.modifier.attribute.wio",
@@ -88,6 +102,18 @@
         {
           "name": "storage.type.wio",
           "match": "\\b(?:i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|isize|usize|byte|bool|char|uchar|string|void|object)\\b"
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "name": "entity.name.function.wio",
+          "match": "\\bfn\\s+([A-Za-z_][A-Za-z0-9_]*)"
+        },
+        {
+          "name": "entity.name.type.wio",
+          "match": "\\b(?:object|component|interface|enum|flagset|flag|realm)\\s+([A-Za-z_][A-Za-z0-9_]*)"
         }
       ]
     }

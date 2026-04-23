@@ -1,0 +1,90 @@
+{
+  "Entry Function": {
+    "prefix": "entry",
+    "body": [
+      "fn Entry(args: string[]) -> i32 {",
+      "    ${1:std::console::Print(\"Hello from Wio.\");}",
+      "    return ${2:0};",
+      "}"
+    ],
+    "description": "Create a standard Wio Entry function."
+  },
+  "Function": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:Name}(${2})${3: -> void} {",
+      "    ${4}",
+      "}"
+    ],
+    "description": "Create a Wio function."
+  },
+  "Object": {
+    "prefix": "object",
+    "body": [
+      "@Default(public)",
+      "object ${1:Entity} {",
+      "    ${2:id}: ${3:i32};",
+      "",
+      "    OnConstruct(${4:id}: ${3:i32}) {",
+      "        self.${2:id} = ${4:id};",
+      "    }",
+      "",
+      "    fn ${5:Render}() {",
+      "        ${6}",
+      "    }",
+      "}"
+    ],
+    "description": "Create a Wio object skeleton."
+  },
+  "Component": {
+    "prefix": "component",
+    "body": [
+      "@GenerateCtors",
+      "component ${1:Vector2} {",
+      "    ${2:x}: ${3:f32};",
+      "    ${4:y}: ${3:f32};",
+      "",
+      "    OnConstruct(${2:x}: ${3:f32}, ${4:y}: ${3:f32}) {",
+      "        self.${2:x} = ${2:x};",
+      "        self.${4:y} = ${4:y};",
+      "    }",
+      "}"
+    ],
+    "description": "Create a Wio component skeleton."
+  },
+  "Interface": {
+    "prefix": "interface",
+    "body": [
+      "interface ${1:IRenderable} {",
+      "    fn ${2:Render}();",
+      "}"
+    ],
+    "description": "Create a Wio interface."
+  },
+  "For In Array": {
+    "prefix": "forin",
+    "body": [
+      "for ${1:item} in ${2:items} {",
+      "    ${3}",
+      "}"
+    ],
+    "description": "Create a Wio for-in loop."
+  },
+  "Match Expression": {
+    "prefix": "match",
+    "body": [
+      "match (${1:value}) {",
+      "    ${2:1}, ${3:2}: ${4:HandleFastPath()};",
+      "    assumed: ${5:HandleDefault()};",
+      "}"
+    ],
+    "description": "Create a Wio match block."
+  },
+  "Cpp Header Use": {
+    "prefix": "cppheader",
+    "body": [
+      "use @CppHeader(\"${1:foo.h}\");"
+    ],
+    "description": "Import a native C++ header into Wio."
+  }
+}
