@@ -2,6 +2,7 @@
   "name": "wio-vscode",
   "displayName": "Wio",
   "description": "VS Code support for the Wio language.",
+  "repository": "https://github.com/tynes0/wio-vscode",
   "version": "0.0.1",
   "publisher": "local",
   "license": "UNLICENSED",
