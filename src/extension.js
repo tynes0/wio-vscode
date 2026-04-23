@@ -20,7 +20,7 @@ function activate(context) {
                 return;
             }
 
-            await runWioForDocument(document, ["--dry-run"], {
+            await runWioForDocument(document, buildCheckArguments(document), {
                 reason: "check",
                 updateDiagnostics: true,
                 showOutputOnSuccess: getConfiguration().get("showOutputOnSuccess", false)
@@ -142,20 +142,50 @@ async function maybeCheckDocument(document, trigger) {
         return;
     }
 
-    await runWioForDocument(document, ["--dry-run"], {
+    if (shouldSkipAutoCheck(document)) {
+        diagnostics.delete(document.uri);
+        return;
+    }
+
+    await runWioForDocument(document, buildCheckArguments(document), {
         reason: trigger,
         updateDiagnostics: true,
         showOutputOnSuccess: false
     });
 }
 
-function getExecutableName() {
+function getExecutableCandidates(document) {
     const configured = getConfiguration().get("executable", "").trim();
+    const candidates = [];
+    const seen = new Set();
+
+    const appendCandidate = (candidate) => {
+        if (!candidate || typeof candidate !== "string" || candidate.trim().length === 0) {
+            return;
+        }
+
+        const normalized = candidate.trim();
+        const key = process.platform === "win32" ? normalized.toLowerCase() : normalized;
+        if (seen.has(key)) {
+            return;
+        }
+
+        seen.add(key);
+        candidates.push(normalized);
+    };
+
     if (configured.length > 0) {
-        return configured;
+        appendCandidate(configured);
     }
 
-    return process.platform === "win32" ? "wio.exe" : "wio";
+    for (const discovered of findDiscoveredExecutablePaths(document)) {
+        appendCandidate(discovered);
+    }
+
+    appendCandidate(process.platform === "win32" ? "wio.exe" : "wio");
+    appendCandidate("wio");
+
+    return candidates;
 }
 
 function getDefaultArgs() {
@@ -176,6 +206,84 @@ function getWorkingDirectory(document) {
     return path.dirname(document.uri.fsPath);
 }
 
+function shouldSkipAutoCheck(document) {
+    const normalizedPath = document.uri.fsPath.replace(/\\/g, "/").toLowerCase();
+    return normalizedPath.includes("/std/") ||
+        normalizedPath.includes("/libs/") ||
+        normalizedPath.includes("/runtime/");
+}
+
+function buildCheckArguments(document) {
+    const text = document.getText();
+    if (/\bfn\s+Entry\s*\(/.test(text)) {
+        return ["--dry-run"];
+    }
+
+    return ["--dry-run", "--target", "static"];
+}
+
+function findDiscoveredExecutablePaths(document) {
+    const executableName = process.platform === "win32" ? "wio.exe" : "wio";
+    const candidatePaths = [];
+    const seen = new Set();
+
+    const appendCandidate = (candidatePath) => {
+        if (!candidatePath) {
+            return;
+        }
+
+        const normalized = path.normalize(candidatePath);
+        const key = normalized.toLowerCase();
+        if (seen.has(key)) {
+            return;
+        }
+
+        seen.add(key);
+        candidatePaths.push(normalized);
+    };
+
+    const appendWorkspaceCandidates = (rootPath) => {
+        if (!rootPath) {
+            return;
+        }
+
+        appendCandidate(path.join(rootPath, "build", "app", "Debug", executableName));
+        appendCandidate(path.join(rootPath, "build", "app", "Release", executableName));
+        appendCandidate(path.join(rootPath, "build", "app", "RelWithDebInfo", executableName));
+        appendCandidate(path.join(rootPath, "build", "app", "MinSizeRel", executableName));
+        appendCandidate(path.join(rootPath, "build", "app", executableName));
+        appendCandidate(path.join(rootPath, "bin", executableName));
+        appendCandidate(path.join(rootPath, "dist", "bin", executableName));
+    };
+
+    for (const workspaceFolder of vscode.workspace.workspaceFolders ?? []) {
+        appendWorkspaceCandidates(workspaceFolder.uri.fsPath);
+    }
+
+    if (document?.uri?.scheme === "file") {
+        let currentDir = path.dirname(document.uri.fsPath);
+        for (let depth = 0; depth < 6; ++depth) {
+            appendWorkspaceCandidates(currentDir);
+
+            const parentDir = path.dirname(currentDir);
+            if (parentDir === currentDir) {
+                break;
+            }
+            currentDir = parentDir;
+        }
+    }
+
+    const wioRoot = process.env.WIO_ROOT || process.env.WIO_HOME;
+    if (wioRoot) {
+        appendCandidate(path.join(wioRoot, "bin", executableName));
+        appendWorkspaceCandidates(wioRoot);
+    }
+
+    appendWorkspaceCandidates(process.cwd());
+
+    return candidatePaths.filter((candidatePath) => fs.existsSync(candidatePath));
+}
+
 function buildArguments(document, extraArgs) {
     const defaultArgs = getDefaultArgs();
     const mergedArgs = [...defaultArgs];
@@ -190,16 +298,17 @@ function buildArguments(document, extraArgs) {
 }
 
 async function runWioForDocument(document, extraArgs, options) {
-    const executable = getExecutableName();
+    const executableCandidates = getExecutableCandidates(document);
     const args = buildArguments(document, extraArgs);
     const cwd = getWorkingDirectory(document);
 
-    outputChannel.appendLine(`[wio:${options.reason}] ${executable} ${args.join(" ")}`);
+    outputChannel.appendLine(`[wio:${options.reason}] candidates: ${executableCandidates.join(" | ")}`);
+    outputChannel.appendLine(`[wio:${options.reason}] args: ${args.join(" ")}`);
     outputChannel.appendLine(`[cwd] ${cwd}`);
 
     let result;
     try {
-        result = await spawnProcess(executable, args, cwd);
+        result = await spawnProcessWithFallback(executableCandidates, args, cwd);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         outputChannel.appendLine(message);
@@ -216,7 +325,7 @@ async function runWioForDocument(document, extraArgs, options) {
     outputChannel.appendLine("");
 
     if (options.updateDiagnostics) {
-        updateDiagnosticsFromOutput(combinedOutput);
+        updateDiagnosticsFromOutput(document, combinedOutput);
     }
 
     if (result.code !== 0) {
@@ -230,6 +339,27 @@ async function runWioForDocument(document, extraArgs, options) {
     }
 
     return result;
+}
+
+async function spawnProcessWithFallback(executableCandidates, args, cwd) {
+    const launchErrors = [];
+
+    for (const executable of executableCandidates) {
+        try {
+            const result = await spawnProcess(executable, args, cwd);
+            result.executable = executable;
+            return result;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            launchErrors.push(`- ${executable}: ${message}`);
+        }
+    }
+
+    throw new Error(
+        "Failed to start any Wio compiler candidate.\n" +
+        launchErrors.join("\n") +
+        "\nSet 'wio.executable' explicitly if needed."
+    );
 }
 
 function spawnProcess(executable, args, cwd) {
@@ -264,14 +394,14 @@ function spawnProcess(executable, args, cwd) {
     });
 }
 
-function updateDiagnosticsFromOutput(output) {
-    diagnostics.clear();
+function updateDiagnosticsFromOutput(document, output) {
+    diagnostics.delete(document.uri);
 
     const diagnosticsByFile = new Map();
     const lines = output.split(/\r?\n/);
 
     for (const line of lines) {
-        const parsed = tryParseDiagnosticLine(line);
+        const parsed = tryParseDiagnosticLine(document, line);
         if (!parsed) {
             continue;
         }
@@ -285,10 +415,14 @@ function updateDiagnosticsFromOutput(output) {
     for (const [filePath, fileDiagnostics] of diagnosticsByFile.entries()) {
         diagnostics.set(vscode.Uri.file(filePath), fileDiagnostics);
     }
+    if (diagnosticsByFile.size === 0) {
+        diagnostics.set(document.uri, []);
+    }
 }
 
-function tryParseDiagnosticLine(line) {
-    const match = /^(Error|Warning|Note)\s+\[([^\]]+)\]:\s*(.+)$/.exec(line.trim());
+function tryParseDiagnosticLine(document, line) {
+    const normalizedLine = normalizeCompilerLogLine(line);
+    const match = /^(Error|Warning|Note)\s+\[([^\]]+)\]:\s*(.+)$/.exec(normalizedLine);
     if (!match) {
         return null;
     }
@@ -296,7 +430,7 @@ function tryParseDiagnosticLine(line) {
     const severityText = match[1];
     const label = match[2];
     const message = match[3];
-    const location = parseLocationLabel(label);
+    const location = parseLocationLabel(document, label);
     if (!location) {
         return null;
     }
@@ -317,9 +451,36 @@ function tryParseDiagnosticLine(line) {
     };
 }
 
-function parseLocationLabel(label) {
-    if (label === "cli" || label === "compiler" || label.startsWith("backend:")) {
-        return null;
+function normalizeCompilerLogLine(line) {
+    const trimmed = line.trim();
+    const prefixMatch = /^(?:\[[^\]]+\]\s*)+(.*)$/.exec(trimmed);
+    if (!prefixMatch) {
+        return trimmed;
+    }
+
+    const candidate = prefixMatch[1].trim();
+    if (candidate.startsWith("WIO LOG:")) {
+        return candidate.slice("WIO LOG:".length).trim();
+    }
+
+    return candidate;
+}
+
+function parseLocationLabel(document, label) {
+    if (label === "cli" || label === "compiler" || label === "unknown") {
+        return {
+            filePath: document.uri.fsPath,
+            line: 1,
+            column: 1
+        };
+    }
+
+    if (label.startsWith("backend:")) {
+        return {
+            filePath: document.uri.fsPath,
+            line: 1,
+            column: 1
+        };
     }
 
     let filePath = label;
