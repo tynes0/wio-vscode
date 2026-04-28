@@ -4,22 +4,21 @@
   "scopeName": "source.wio",
   "patterns": [
     { "include": "#comments" },
-    { "include": "#attributes" },
     { "include": "#useStatements" },
+    { "include": "#attributes" },
     { "include": "#interpolatedStrings" },
     { "include": "#strings" },
     { "include": "#numbers" },
     { "include": "#constants" },
-    { "include": "#keywords" },
-    { "include": "#primitiveTypes" },
-    { "include": "#declarationKeywords" },
     { "include": "#typeAliasDeclarations" },
     { "include": "#genericFunctionDeclarations" },
     { "include": "#typeDeclarations" },
-    { "include": "#modulePathAccess" },
-    { "include": "#genericParameterReferences" },
     { "include": "#functionCalls" },
-    { "include": "#typeUsages" }
+    { "include": "#modulePathAccess" },
+    { "include": "#typeUsages" },
+    { "include": "#keywords" },
+    { "include": "#primitiveTypes" },
+    { "include": "#declarationKeywords" }
   ],
   "repository": {
     "comments": {
@@ -48,8 +47,11 @@
     "attributes": {
       "patterns": [
         {
-          "name": "storage.modifier.attribute.wio",
-          "match": "@[A-Za-z_][A-Za-z0-9_]*"
+          "match": "(@)([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "punctuation.definition.annotation.wio" },
+            "2": { "name": "storage.modifier.attribute.wio" }
+          }
         }
       ]
     },
@@ -66,6 +68,9 @@
             "0": { "name": "punctuation.terminator.statement.wio" }
           },
           "patterns": [
+            { "include": "#attributes" },
+            { "include": "#strings" },
+            { "include": "#modulePathAccess" },
             {
               "name": "keyword.control.import.wio",
               "match": "\\bas\\b"
@@ -73,8 +78,7 @@
             {
               "name": "entity.name.alias.wio",
               "match": "(?<=\\bas\\s+)[A-Za-z_][A-Za-z0-9_]*"
-            },
-            { "include": "#modulePathAccess" }
+            }
           ]
         }
       ]
@@ -110,6 +114,7 @@
         {
           "name": "meta.interpolation.wio",
           "begin": "\\$\\{",
+          "contentName": "meta.embedded.expression.wio",
           "beginCaptures": {
             "0": { "name": "punctuation.section.interpolation.begin.wio" }
           },
@@ -130,10 +135,13 @@
             { "include": "#typeAliasDeclarations" },
             { "include": "#genericFunctionDeclarations" },
             { "include": "#typeDeclarations" },
-            { "include": "#modulePathAccess" },
-            { "include": "#genericParameterReferences" },
             { "include": "#functionCalls" },
-            { "include": "#typeUsages" }
+            { "include": "#modulePathAccess" },
+            { "include": "#typeUsages" },
+            {
+              "name": "variable.other.readwrite.wio",
+              "match": "\\b[a-z_][A-Za-z0-9_]*\\b"
+            }
           ]
         }
       ]
@@ -235,6 +243,45 @@
     "typeAliasDeclarations": {
       "patterns": [
         {
+          "match": "\\b(type)\\s+([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(\\s*)(=)\\s*([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(\\[\\])?",
+          "captures": {
+            "1": { "name": "storage.type.declaration.wio" },
+            "2": { "name": "entity.name.type.alias.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "entity.name.type.parameter.wio" },
+            "6": { "name": "keyword.operator.wio" },
+            "8": { "name": "keyword.operator.wio" },
+            "9": { "name": "support.type.user.wio" },
+            "11": { "name": "keyword.operator.wio" },
+            "12": { "name": "support.type.user.wio" },
+            "13": { "name": "keyword.operator.wio" },
+            "14": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "\\b(type)\\s+([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(\\s*)(=)\\s*([A-Z][A-Za-z0-9_]*)(\\[\\])?",
+          "captures": {
+            "1": { "name": "storage.type.declaration.wio" },
+            "2": { "name": "entity.name.type.alias.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "entity.name.type.parameter.wio" },
+            "6": { "name": "keyword.operator.wio" },
+            "8": { "name": "keyword.operator.wio" },
+            "9": { "name": "entity.name.type.parameter.wio" },
+            "10": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "\\b(type)\\s+([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)",
+          "captures": {
+            "1": { "name": "storage.type.declaration.wio" },
+            "2": { "name": "entity.name.type.alias.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "entity.name.type.parameter.wio" },
+            "6": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
           "match": "\\b(type)\\s+([A-Za-z_][A-Za-z0-9_]*)",
           "captures": {
             "1": { "name": "storage.type.declaration.wio" },
@@ -245,6 +292,16 @@
     },
     "genericFunctionDeclarations": {
       "patterns": [
+        {
+          "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)",
+          "captures": {
+            "1": { "name": "storage.type.function.wio" },
+            "2": { "name": "entity.name.function.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "entity.name.type.parameter.wio" },
+            "6": { "name": "keyword.operator.wio" }
+          }
+        },
         {
           "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z0-9_]*)",
           "captures": {
@@ -264,10 +321,99 @@
           }
         },
         {
+          "match": "\\b(object|component|interface|enum|flagset|flag)\\s+([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)",
+          "captures": {
+            "1": { "name": "storage.type.declaration.wio" },
+            "2": { "name": "entity.name.type.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "entity.name.type.parameter.wio" },
+            "6": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
           "match": "\\b(object|component|interface|enum|flagset|flag)\\s+([A-Za-z_][A-Za-z0-9_]*)",
           "captures": {
             "1": { "name": "storage.type.declaration.wio" },
             "2": { "name": "entity.name.type.wio" }
+          }
+        }
+      ]
+    },
+    "functionCalls": {
+      "patterns": [
+        {
+          "match": "([A-Za-z_][A-Za-z0-9_]*::)([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)((?:i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|isize|usize|byte|bool|char|uchar|string|void|object))(>)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "entity.name.namespace.wio" },
+            "2": { "name": "support.function.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "support.type.primitive.wio" },
+            "6": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "([A-Za-z_][A-Za-z0-9_]*::)([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "entity.name.namespace.wio" },
+            "2": { "name": "support.function.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "support.type.user.wio" },
+            "6": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)((?:i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|isize|usize|byte|bool|char|uchar|string|void|object))(>)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "support.function.wio" },
+            "3": { "name": "keyword.operator.wio" },
+            "4": { "name": "support.type.primitive.wio" },
+            "5": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "support.function.wio" },
+            "3": { "name": "keyword.operator.wio" },
+            "4": { "name": "support.type.user.wio" },
+            "5": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "([A-Za-z_][A-Za-z0-9_]*::)([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "entity.name.namespace.wio" },
+            "2": { "name": "support.function.wio" }
+          }
+        },
+        {
+          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "support.function.wio" }
+          }
+        },
+        {
+          "match": "\\.([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)((?:i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|isize|usize|byte|bool|char|uchar|string|void|object))(>)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "support.function.method.wio" },
+            "3": { "name": "keyword.operator.wio" },
+            "4": { "name": "support.type.primitive.wio" },
+            "5": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "\\.([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "support.function.method.wio" },
+            "3": { "name": "keyword.operator.wio" },
+            "4": { "name": "support.type.user.wio" },
+            "5": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "\\.([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\()",
+          "captures": {
+            "1": { "name": "support.function.method.wio" }
           }
         }
       ]
@@ -284,6 +430,14 @@
               "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=::)"
             },
             {
+              "name": "support.function.wio",
+              "match": "(?<=::)[A-Za-z_][A-Za-z0-9_]*\\b(?=\\s*(?:<[^>]+>)?\\s*\\()"
+            },
+            {
+              "name": "support.type.user.wio",
+              "match": "(?<=::)[A-Z][A-Za-z0-9_]*\\b"
+            },
+            {
               "name": "variable.other.member.wio",
               "match": "(?<=::)[A-Za-z_][A-Za-z0-9_]*\\b"
             },
@@ -295,34 +449,83 @@
         }
       ]
     },
-    "genericParameterReferences": {
+    "typeUsages": {
       "patterns": [
         {
-          "name": "entity.name.type.parameter.wio",
-          "match": "(?<=<|,|\\(|:|->)\\s*[A-Z][A-Za-z0-9_]*(?!\\s*<)(?=\\s*(?:\\[\\]|,|>|\\)|;|=|\\{|$))"
-        }
-      ]
-    },
-    "functionCalls": {
-      "patterns": [
-        {
-          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)(\\s*<[^>]+>)?(?=\\s*\\()",
+          "match": "(:)\\s*([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(\\[\\])?",
           "captures": {
-            "1": { "name": "support.function.wio" },
-            "2": { "name": "meta.generic.arguments.wio" }
+            "1": { "name": "punctuation.separator.type.wio" },
+            "2": { "name": "support.type.user.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "support.type.user.wio" },
+            "6": { "name": "keyword.operator.wio" },
+            "7": { "name": "keyword.operator.wio" }
           }
         },
         {
-          "match": "\\.([A-Za-z_][A-Za-z0-9_]*)(\\s*<[^>]+>)?(?=\\s*\\()",
+          "match": "(->)\\s*([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(\\[\\])?",
           "captures": {
-            "1": { "name": "support.function.method.wio" },
-            "2": { "name": "meta.generic.arguments.wio" }
+            "1": { "name": "storage.modifier.arrow.wio" },
+            "2": { "name": "support.type.user.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "support.type.user.wio" },
+            "6": { "name": "keyword.operator.wio" },
+            "7": { "name": "keyword.operator.wio" }
           }
-        }
-      ]
-    },
-    "typeUsages": {
-      "patterns": [
+        },
+        {
+          "match": "\\b(is|fit)\\s+([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(\\[\\])?",
+          "captures": {
+            "1": { "name": "keyword.control.flow.wio" },
+            "2": { "name": "support.type.user.wio" },
+            "4": { "name": "keyword.operator.wio" },
+            "5": { "name": "support.type.user.wio" },
+            "6": { "name": "keyword.operator.wio" },
+            "7": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "(:)\\s*([A-Z][A-Za-z0-9_]*)(\\[\\])?",
+          "captures": {
+            "1": { "name": "punctuation.separator.type.wio" },
+            "2": { "name": "entity.name.type.parameter.wio" },
+            "3": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "(->)\\s*([A-Z][A-Za-z0-9_]*)(\\[\\])?",
+          "captures": {
+            "1": { "name": "storage.modifier.arrow.wio" },
+            "2": { "name": "entity.name.type.parameter.wio" },
+            "3": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "\\b(is|fit)\\s+([A-Z][A-Za-z0-9_]*)(\\[\\])?",
+          "captures": {
+            "1": { "name": "keyword.control.flow.wio" },
+            "2": { "name": "entity.name.type.parameter.wio" },
+            "3": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)((?:i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|isize|usize|byte|bool|char|uchar|string|void|object))(>)(?=\\s*(?:\\[\\]|\\b|,|\\)|;|=|\\{|$))",
+          "captures": {
+            "1": { "name": "support.type.user.wio" },
+            "3": { "name": "keyword.operator.wio" },
+            "4": { "name": "support.type.primitive.wio" },
+            "5": { "name": "keyword.operator.wio" }
+          }
+        },
+        {
+          "match": "\\b([A-Za-z_][A-Za-z0-9_]*)(\\s*)(<)([^>]+)(>)(?=\\s*(?:\\[\\]|\\b|,|\\)|;|=|\\{|$))",
+          "captures": {
+            "1": { "name": "support.type.user.wio" },
+            "3": { "name": "keyword.operator.wio" },
+            "4": { "name": "support.type.user.wio" },
+            "5": { "name": "keyword.operator.wio" }
+          }
+        },
         {
           "match": "(:)\\s*([A-Za-z_][A-Za-z0-9_]*)(\\s*<[^>]+>)?",
           "captures": {
@@ -340,10 +543,11 @@
           }
         },
         {
-          "match": "\\b([A-Z][A-Za-z0-9_]*)(\\s*<[^>]+>)?",
+          "match": "\\b(is|fit)\\s+([A-Za-z_][A-Za-z0-9_]*)(\\s*<[^>]+>)?",
           "captures": {
-            "1": { "name": "support.type.user.wio" },
-            "2": { "name": "meta.generic.arguments.wio" }
+            "1": { "name": "keyword.control.flow.wio" },
+            "2": { "name": "support.type.user.wio" },
+            "3": { "name": "meta.generic.arguments.wio" }
           }
         }
       ]

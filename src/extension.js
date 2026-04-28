@@ -25,6 +25,24 @@ const COLLECTION_ALIAS_KINDS = new Map([
     ["TreeMap", "tree"]
 ]);
 
+const ATTRIBUTE_CATALOG = [
+    builtinAttribute("Native"),
+    builtinAttribute("CppHeader", ["header: string"]),
+    builtinAttribute("CppName", ["symbol: string"]),
+    builtinAttribute("Instantiate", ["type: Type"]),
+    builtinAttribute("From", ["base: Type"]),
+    builtinAttribute("Default", ["access: public|private|protected"]),
+    builtinAttribute("GenerateCtors"),
+    builtinAttribute("NoDefaultCtor"),
+    builtinAttribute("Trust", ["type: Type"]),
+    builtinAttribute("Final"),
+    builtinAttribute("Type", ["underlying: Type"]),
+    builtinAttribute("ReadOnly"),
+    builtinAttribute("Export"),
+    builtinAttribute("Command", ["name?: string"]),
+    builtinAttribute("Event", ["name?: string"])
+];
+
 const BUILTIN_MEMBER_CATALOG = {
     string: [
         builtinMethod("Count", [], "usize"),
@@ -290,7 +308,8 @@ function activate(context) {
                 provideCompletionItems: async (document, position) => provideCompletionItems(document, position)
             },
             ".",
-            ":"
+            ":",
+            "@"
         )
     );
 
@@ -875,6 +894,11 @@ async function provideCompletionItems(document, position) {
     const index = await getWorkspaceSymbolIndex(document);
     const documentContext = buildDocumentContext(document, position, index);
 
+    const attributeContext = extractAttributeCompletionContext(linePrefix);
+    if (attributeContext) {
+        return buildAttributeCompletionItems(attributeContext.partial);
+    }
+
     const useContext = extractUseCompletionContext(linePrefix);
     if (useContext) {
         return buildScopeCompletionItems(useContext.scopePath, useContext.partial, index, documentContext);
@@ -890,7 +914,23 @@ async function provideCompletionItems(document, position) {
         return buildMemberCompletionItems(memberContext.receiver, memberContext.partial, documentContext, index);
     }
 
+    const identifierContext = extractIdentifierCompletionContext(linePrefix);
+    if (identifierContext) {
+        return buildIdentifierCompletionItems(identifierContext.partial, documentContext, index);
+    }
+
     return [];
+}
+
+function extractAttributeCompletionContext(linePrefix) {
+    const match = /@([A-Za-z_]*)$/.exec(linePrefix);
+    if (!match) {
+        return null;
+    }
+
+    return {
+        partial: match[1] || ""
+    };
 }
 
 async function provideSignatureHelp(document, position) {
@@ -978,6 +1018,21 @@ function extractMemberCompletionContext(linePrefix) {
     return {
         receiver: match[1],
         partial: match[2] || ""
+    };
+}
+
+function extractIdentifierCompletionContext(linePrefix) {
+    if (/::[A-Za-z_][A-Za-z0-9_]*$/.test(linePrefix) || /\.[A-Za-z_][A-Za-z0-9_]*$/.test(linePrefix) || /@[A-Za-z_]*$/.test(linePrefix)) {
+        return null;
+    }
+
+    const match = /(?:^|[^A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*)$/.exec(linePrefix);
+    if (!match) {
+        return null;
+    }
+
+    return {
+        partial: match[1]
     };
 }
 
@@ -1115,6 +1170,78 @@ function buildMemberCompletionItems(receiverName, partial, documentContext, inde
     }
 
     return dedupeCompletionItems(items);
+}
+
+function buildIdentifierCompletionItems(partial, documentContext, index) {
+    const prefix = partial.toLowerCase();
+    const items = [];
+
+    for (const [name, typeText] of documentContext.localTypes.entries()) {
+        if (prefix.length > 0 && !name.toLowerCase().startsWith(prefix)) {
+            continue;
+        }
+
+        const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Variable);
+        item.detail = `${name}: ${typeText}`;
+        item.insertText = name;
+        item.sortText = `0_${name}`;
+        items.push(item);
+    }
+
+    for (const [alias, fullPath] of documentContext.aliases.entries()) {
+        if (prefix.length > 0 && !alias.toLowerCase().startsWith(prefix)) {
+            continue;
+        }
+
+        const item = new vscode.CompletionItem(alias, vscode.CompletionItemKind.Module);
+        item.detail = `use alias for ${fullPath}`;
+        item.insertText = alias;
+        item.sortText = `1_${alias}`;
+        items.push(item);
+    }
+
+    const visibleScopes = buildVisibleScopeChain(documentContext.scopePath);
+    for (const scopePath of visibleScopes) {
+        const scope = index.scopes.get(scopePath);
+        if (!scope) {
+            continue;
+        }
+
+        for (const symbol of scope.symbols) {
+            if (prefix.length > 0 && !symbol.name.toLowerCase().startsWith(prefix)) {
+                continue;
+            }
+
+            items.push(makeSymbolCompletionItem(symbol));
+        }
+    }
+
+    return dedupeCompletionItems(items);
+}
+
+function buildAttributeCompletionItems(partial) {
+    const prefix = partial.toLowerCase();
+    const items = [];
+
+    for (const attribute of ATTRIBUTE_CATALOG) {
+        if (prefix.length > 0 && !attribute.name.toLowerCase().startsWith(prefix)) {
+            continue;
+        }
+
+        const item = new vscode.CompletionItem(attribute.name, vscode.CompletionItemKind.Class);
+        item.detail = attribute.signature;
+        item.documentation = new vscode.MarkdownString(attribute.documentation);
+        item.insertText = attribute.snippet;
+        if (attribute.params.length > 0) {
+            item.command = {
+                command: "editor.action.triggerParameterHints",
+                title: "Trigger Parameter Hints"
+            };
+        }
+        items.push(item);
+    }
+
+    return items;
 }
 
 function resolveCallableSignatures(calleeExpression, documentContext, index) {
@@ -1314,9 +1441,10 @@ function parseWioTextIntoIndex(text, filePath, index) {
         const openCount = countChar(sanitizedLine, "{");
         const closeCount = countChar(sanitizedLine, "}");
         const currentScope = scopeStack[scopeStack.length - 1];
+        const insideCallableScope = scopeStack.some((entry) => entry.kind === "callable");
 
         if (trimmedLine.length > 0) {
-            const realmMatch = /\brealm\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/.exec(trimmedLine);
+            const realmMatch = !insideCallableScope ? /\brealm\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/.exec(trimmedLine) : null;
             if (realmMatch) {
                 const realmName = realmMatch[1];
                 const realmFqName = qualifyName(currentScope.fqName, realmName);
@@ -1331,7 +1459,7 @@ function parseWioTextIntoIndex(text, filePath, index) {
                 continue;
             }
 
-            const typeMatch = /\b(object|component|interface|enum|flagset|flag)\s+([A-Za-z_][A-Za-z0-9_]*)(\s*<[^>]+>)?\s*\{?/.exec(trimmedLine);
+            const typeMatch = !insideCallableScope ? /\b(object|component|interface|enum|flagset|flag)\s+([A-Za-z_][A-Za-z0-9_]*)(\s*<[^>]+>)?\s*\{?/.exec(trimmedLine) : null;
             if (typeMatch) {
                 const typeKind = typeMatch[1];
                 const typeName = typeMatch[2];
@@ -1355,7 +1483,7 @@ function parseWioTextIntoIndex(text, filePath, index) {
                 continue;
             }
 
-            const typeAliasMatch = /\btype\s+([A-Za-z_][A-Za-z0-9_]*)(\s*<[^>]+>)?\s*=\s*([^;]+);/.exec(trimmedLine);
+            const typeAliasMatch = !insideCallableScope ? /\btype\s+([A-Za-z_][A-Za-z0-9_]*)(\s*<[^>]+>)?\s*=\s*([^;]+);/.exec(trimmedLine) : null;
             if (typeAliasMatch) {
                 const aliasName = typeAliasMatch[1];
                 const genericSuffix = typeAliasMatch[2] || "";
@@ -1370,7 +1498,7 @@ function parseWioTextIntoIndex(text, filePath, index) {
                 });
             }
 
-            const functionMatch = /\bfn\s+([A-Za-z_][A-Za-z0-9_]*)(\s*<[^>]+>)?\s*\(([^)]*)\)\s*(?:->\s*([^{]+))?/.exec(trimmedLine);
+            const functionMatch = !insideCallableScope ? /\bfn\s+([A-Za-z_][A-Za-z0-9_]*)(\s*<[^>]+>)?\s*\(([^)]*)\)\s*(?:->\s*([^{]+))?/.exec(trimmedLine) : null;
             if (functionMatch) {
                 const functionName = functionMatch[1];
                 const genericSuffix = functionMatch[2] || "";
@@ -1387,9 +1515,17 @@ function parseWioTextIntoIndex(text, filePath, index) {
                         kind: "method"
                     });
                 }
+
+                if (trimmedLine.includes("{")) {
+                    scopeStack.push({
+                        fqName: functionFqName,
+                        kind: "callable",
+                        braceDepth: braceDepth + openCount
+                    });
+                }
             }
 
-            if (isTypeScopeKind(currentScope.kind)) {
+            if (isTypeScopeKind(currentScope.kind) && !insideCallableScope) {
                 const methodMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*(?:->\s*([^{]+))?/.exec(trimmedLine);
                 if (methodMatch && !isReservedWord(methodMatch[1]) && !trimmedLine.startsWith("fn ")) {
                     const methodName = methodMatch[1];
@@ -1400,6 +1536,14 @@ function parseWioTextIntoIndex(text, filePath, index) {
                     addScopeSymbol(index, currentScope.fqName, methodSymbol);
                     ensureType(index, currentScope.fqName, path.basename(currentScope.fqName), currentScope.kind, "");
                     index.types.get(currentScope.fqName).methods.push(methodSymbol);
+
+                    if (trimmedLine.includes("{")) {
+                        scopeStack.push({
+                            fqName: methodFqName,
+                            kind: "callable",
+                            braceDepth: braceDepth + openCount
+                        });
+                    }
                 }
 
                 const fieldMatch = /^(?:public|private|protected)?\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^;]+);/.exec(trimmedLine);
@@ -1592,6 +1736,22 @@ function isTypeScopeKind(kind) {
 
 function qualifyName(scopeFqName, name) {
     return scopeFqName ? `${scopeFqName}::${name}` : name;
+}
+
+function buildVisibleScopeChain(scopePath) {
+    const scopes = [""];
+    if (!scopePath) {
+        return scopes;
+    }
+
+    const segments = scopePath.split("::").filter((segment) => segment.length > 0);
+    let current = "";
+    for (const segment of segments) {
+        current = qualifyName(current, segment);
+        scopes.push(current);
+    }
+
+    return scopes.reverse();
 }
 
 function buildDocumentContext(document, position, index) {
@@ -1894,6 +2054,21 @@ function builtinMethod(name, params, returnType) {
         params,
         returnType,
         signature: `${name}(${params.join(", ")}) -> ${returnType}`
+    };
+}
+
+function builtinAttribute(name, params = []) {
+    const signature = params.length > 0 ? `@${name}(${params.join(", ")})` : `@${name}`;
+    const snippet = params.length > 0
+        ? new vscode.SnippetString(`${name}($1)`)
+        : new vscode.SnippetString(name);
+
+    return {
+        name,
+        params,
+        signature,
+        snippet,
+        documentation: `Wio attribute: \`${signature}\``
     };
 }
 
