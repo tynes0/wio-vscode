@@ -3,7 +3,7 @@
   "displayName": "Wio",
   "description": "VS Code support for the Wio language.",
   "repository": "https://github.com/tynes0/wio-vscode",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "local",
   "license": "UNLICENSED",
   "main": "./src/extension.js",

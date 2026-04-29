@@ -309,7 +309,9 @@ function activate(context) {
             },
             ".",
             ":",
-            "@"
+            "@",
+            "(",
+            ","
         )
     );
 
@@ -321,6 +323,33 @@ function activate(context) {
             },
             "(",
             ","
+        )
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerDefinitionProvider(
+            { language: "wio", scheme: "file" },
+            {
+                provideDefinition: async (document, position) => provideDefinition(document, position)
+            }
+        )
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerHoverProvider(
+            { language: "wio", scheme: "file" },
+            {
+                provideHover: async (document, position) => provideHover(document, position)
+            }
+        )
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerReferenceProvider(
+            { language: "wio", scheme: "file" },
+            {
+                provideReferences: async (document, position, options) => provideReferences(document, position, options)
+            }
         )
     );
 
@@ -899,6 +928,11 @@ async function provideCompletionItems(document, position) {
         return buildAttributeCompletionItems(attributeContext.partial);
     }
 
+    const attributeArgumentContext = extractAttributeArgumentCompletionContext(linePrefix);
+    if (attributeArgumentContext) {
+        return buildAttributeArgumentCompletionItems(attributeArgumentContext, documentContext, index);
+    }
+
     const useContext = extractUseCompletionContext(linePrefix);
     if (useContext) {
         return buildScopeCompletionItems(useContext.scopePath, useContext.partial, index, documentContext);
@@ -933,6 +967,22 @@ function extractAttributeCompletionContext(linePrefix) {
     };
 }
 
+function extractAttributeArgumentCompletionContext(linePrefix) {
+    const match = /@([A-Za-z_][A-Za-z0-9_]*)\(([^)]*)$/.exec(linePrefix);
+    if (!match) {
+        return null;
+    }
+
+    const argumentText = match[2] || "";
+    const parts = splitTopLevel(argumentText, ",");
+    const partial = (parts.at(-1) || "").trim();
+
+    return {
+        attributeName: match[1],
+        partial
+    };
+}
+
 async function provideSignatureHelp(document, position) {
     if (!isWioDocument(document)) {
         return null;
@@ -955,6 +1005,546 @@ async function provideSignatureHelp(document, position) {
     signatureHelp.activeSignature = 0;
     signatureHelp.activeParameter = Math.min(callContext.activeParameter, Math.max(0, signatures[0].params.length - 1));
     return signatureHelp;
+}
+
+async function provideDefinition(document, position) {
+    if (!isWioDocument(document)) {
+        return null;
+    }
+
+    const index = await getWorkspaceSymbolIndex(document);
+    const documentContext = buildDocumentContext(document, position, index);
+    const reference = resolveReferenceAtPosition(document, position, documentContext, index);
+    if (!reference?.location) {
+        return null;
+    }
+
+    return toVscodeLocation(reference.location);
+}
+
+async function provideHover(document, position) {
+    if (!isWioDocument(document)) {
+        return null;
+    }
+
+    const index = await getWorkspaceSymbolIndex(document);
+    const documentContext = buildDocumentContext(document, position, index);
+    const reference = resolveReferenceAtPosition(document, position, documentContext, index);
+    if (!reference) {
+        return null;
+    }
+
+    const markdown = new vscode.MarkdownString(undefined, true);
+    markdown.supportHtml = false;
+    markdown.isTrusted = false;
+    markdown.appendCodeblock(reference.signature || reference.detail || reference.label || reference.name, "wio");
+
+    if (reference.fqName && reference.fqName !== reference.name) {
+        markdown.appendMarkdown(`\n\n\`${reference.fqName}\``);
+    }
+
+    if (reference.documentation) {
+        markdown.appendMarkdown(`\n\n${reference.documentation}`);
+    }
+
+    return new vscode.Hover(markdown);
+}
+
+async function provideReferences(document, position, options) {
+    if (!isWioDocument(document)) {
+        return [];
+    }
+
+    const index = await getWorkspaceSymbolIndex(document);
+    const documentContext = buildDocumentContext(document, position, index);
+    const target = resolveReferenceAtPosition(document, position, documentContext, index);
+    if (!target?.name) {
+        return [];
+    }
+
+    const candidateUris = await vscode.workspace.findFiles("**/*.wio");
+    const candidatePaths = new Set(candidateUris
+        .map((uri) => uri.fsPath)
+        .filter((filePath) => !shouldIgnoreIndexedPath(normalizeFsPath(filePath))));
+    candidatePaths.add(document.uri.fsPath);
+
+    const openDocuments = new Map();
+    for (const textDocument of vscode.workspace.textDocuments) {
+        if (isWioDocument(textDocument)) {
+            openDocuments.set(textDocument.uri.fsPath, textDocument);
+        }
+    }
+
+    const results = [];
+    const searchPattern = buildReferenceSearchPattern(target);
+
+    for (const filePath of candidatePaths) {
+        const candidateDocument = openDocuments.get(filePath) || await vscode.workspace.openTextDocument(filePath);
+        const candidateText = candidateDocument.getText();
+        const regex = new RegExp(searchPattern, "g");
+        let match;
+
+        while ((match = regex.exec(candidateText)) !== null) {
+            const matchOffset = match.index + (target.kind === "attribute" ? 0 : 0);
+            const start = candidateDocument.positionAt(matchOffset);
+            const end = candidateDocument.positionAt(matchOffset + match[0].length);
+            const candidateContext = buildDocumentContext(candidateDocument, start, index);
+            const resolved = resolveReferenceAtPosition(candidateDocument, start, candidateContext, index);
+            if (!referenceMatchesTarget(resolved, target)) {
+                continue;
+            }
+
+            if (!options.includeDeclaration && isSameLocation(resolved?.location, target.location)) {
+                continue;
+            }
+
+            results.push(new vscode.Location(candidateDocument.uri, new vscode.Range(start, end)));
+        }
+    }
+
+    return dedupeLocations(results);
+}
+
+function resolveReferenceAtPosition(document, position, documentContext, index) {
+    const lineText = document.lineAt(position.line).text;
+    const character = position.character;
+
+    const attributeReference = resolveAttributeReferenceAtPosition(lineText, character);
+    if (attributeReference) {
+        return attributeReference;
+    }
+
+    const memberReference = findMemberReferenceAtPosition(lineText, character);
+    if (memberReference?.onMember) {
+        return resolveMemberReference(memberReference, documentContext, index);
+    }
+
+    const scopedReference = findScopedReferenceAtPosition(lineText, character);
+    if (scopedReference) {
+        return resolveScopedReference(scopedReference, documentContext, index);
+    }
+
+    const identifier = findIdentifierAtPosition(lineText, character);
+    if (!identifier) {
+        return null;
+    }
+
+    return resolveIdentifierReference(identifier.text, document, position, documentContext, index);
+}
+
+function resolveAttributeReferenceAtPosition(lineText, character) {
+    const regex = /@([A-Za-z_][A-Za-z0-9_]*)/g;
+    let match;
+    while ((match = regex.exec(lineText)) !== null) {
+        const start = match.index;
+        const end = start + match[0].length;
+        if (character < start || character > end) {
+            continue;
+        }
+
+        const attribute = ATTRIBUTE_CATALOG.find((entry) => entry.name === match[1]);
+        if (!attribute) {
+            return null;
+        }
+
+        return {
+            kind: "attribute",
+            name: `@${attribute.name}`,
+            label: attribute.signature,
+            detail: attribute.signature,
+            signature: attribute.signature,
+            documentation: attribute.documentation,
+            location: null
+        };
+    }
+
+    return null;
+}
+
+function findMemberReferenceAtPosition(lineText, character) {
+    const regex = /([A-Za-z_][A-Za-z0-9_\.]*)\.([A-Za-z_][A-Za-z0-9_]*)/g;
+    let match;
+    while ((match = regex.exec(lineText)) !== null) {
+        const receiverStart = match.index;
+        const receiverEnd = receiverStart + match[1].length;
+        const memberStart = receiverEnd + 1;
+        const memberEnd = memberStart + match[2].length;
+
+        if (character >= memberStart && character <= memberEnd) {
+            return {
+                receiver: match[1],
+                member: match[2],
+                onMember: true
+            };
+        }
+    }
+
+    return null;
+}
+
+function findScopedReferenceAtPosition(lineText, character) {
+    const regex = /[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)+/g;
+    let match;
+    while ((match = regex.exec(lineText)) !== null) {
+        const matchStart = match.index;
+        const matchEnd = matchStart + match[0].length;
+        if (character < matchStart || character > matchEnd) {
+            continue;
+        }
+
+        const segments = match[0].split("::");
+        let cursor = matchStart;
+        for (let segmentIndex = 0; segmentIndex < segments.length; ++segmentIndex) {
+            const segment = segments[segmentIndex];
+            const start = cursor;
+            const end = start + segment.length;
+            if (character >= start && character <= end) {
+                return {
+                    segments,
+                    segmentIndex
+                };
+            }
+            cursor = end + 2;
+        }
+    }
+
+    return null;
+}
+
+function findIdentifierAtPosition(lineText, character) {
+    const regex = /[A-Za-z_][A-Za-z0-9_]*/g;
+    let match;
+    while ((match = regex.exec(lineText)) !== null) {
+        const start = match.index;
+        const end = start + match[0].length;
+        if (character >= start && character <= end) {
+            return {
+                text: match[0],
+                start,
+                end
+            };
+        }
+    }
+
+    return null;
+}
+
+function buildReferenceSearchPattern(target) {
+    if (target.kind === "attribute") {
+        return `@${escapeRegex(target.name.replace(/^@/, ""))}\\b`;
+    }
+
+    return `\\b${escapeRegex(target.name)}\\b`;
+}
+
+function referenceMatchesTarget(candidate, target) {
+    if (!candidate || !target) {
+        return false;
+    }
+
+    if (isSameLocation(candidate.location, target.location)) {
+        return true;
+    }
+
+    if (candidate.fqName && target.fqName && candidate.fqName === target.fqName && candidate.kind === target.kind) {
+        return true;
+    }
+
+    if (candidate.kind === "local" && target.kind === "local") {
+        return isSameLocation(candidate.location, target.location);
+    }
+
+    if (candidate.kind === "attribute" && target.kind === "attribute" && candidate.name === target.name) {
+        return true;
+    }
+
+    return false;
+}
+
+function isSameLocation(left, right) {
+    if (!left || !right) {
+        return false;
+    }
+
+    return normalizeFsPath(left.filePath) === normalizeFsPath(right.filePath)
+        && left.line === right.line
+        && left.column === right.column;
+}
+
+function dedupeLocations(locations) {
+    const seen = new Set();
+    const deduped = [];
+
+    for (const location of locations) {
+        const key = `${normalizeFsPath(location.uri.fsPath)}:${location.range.start.line}:${location.range.start.character}:${location.range.end.line}:${location.range.end.character}`;
+        if (seen.has(key)) {
+            continue;
+        }
+
+        seen.add(key);
+        deduped.push(location);
+    }
+
+    return deduped;
+}
+
+function resolveMemberReference(memberReference, documentContext, index) {
+    const resolvedType = resolveExpressionType(memberReference.receiver, documentContext, index);
+    if (!resolvedType) {
+        return null;
+    }
+
+    const builtinMembers = BUILTIN_MEMBER_CATALOG[resolvedType.kind] || [];
+    const builtinMatch = builtinMembers.find((entry) => entry.name === memberReference.member);
+    if (builtinMatch) {
+        return {
+            kind: "builtin-method",
+            name: builtinMatch.name,
+            fqName: builtinMatch.name,
+            detail: builtinMatch.signature,
+            signature: builtinMatch.signature,
+            documentation: `Builtin ${resolvedType.kind} member.`,
+            location: null
+        };
+    }
+
+    if (resolvedType.kind !== "user" || !resolvedType.fqName) {
+        return null;
+    }
+
+    const typeInfo = index.types.get(resolvedType.fqName);
+    if (!typeInfo) {
+        return null;
+    }
+
+    return typeInfo.fields.find((field) => field.name === memberReference.member)
+        || typeInfo.methods.find((method) => method.name === memberReference.member)
+        || null;
+}
+
+function resolveScopedReference(scopedReference, documentContext, index) {
+    const { segments, segmentIndex } = scopedReference;
+    const aliasTarget = documentContext.aliases.get(segments[0]);
+    if (aliasTarget && segmentIndex === 0) {
+        return makeAliasReference(segments[0], aliasTarget, index);
+    }
+
+    const expandedBase = aliasTarget ? aliasTarget.split("::") : [segments[0]];
+    if (segmentIndex < segments.length - 1) {
+        const pathSegments = [...expandedBase, ...segments.slice(1, segmentIndex + 1)];
+        return resolveScopeOrTypeReference(pathSegments.join("::"), index, documentContext);
+    }
+
+    const parentPath = [...expandedBase, ...segments.slice(1, -1)].join("::");
+    const symbolName = segments[segments.length - 1];
+    const exactPath = parentPath ? `${parentPath}::${symbolName}` : symbolName;
+
+    const scopeOrType = resolveScopeOrTypeReference(exactPath, index, documentContext);
+    if (scopeOrType) {
+        return scopeOrType;
+    }
+
+    const parentScopePath = resolveScopePathExpression(parentPath, documentContext, index);
+    const parentScope = index.scopes.get(parentScopePath);
+    if (!parentScope) {
+        return null;
+    }
+
+    return parentScope.symbols.find((symbol) => symbol.name === symbolName) || null;
+}
+
+function resolveIdentifierReference(identifier, document, position, documentContext, index) {
+    const localDefinition = findLocalDefinition(document, position, identifier);
+    if (localDefinition) {
+        return localDefinition;
+    }
+
+    const aliasTarget = documentContext.aliases.get(identifier);
+    if (aliasTarget) {
+        return makeAliasReference(identifier, aliasTarget, index);
+    }
+
+    const visibleSymbol = resolveIdentifierSymbol(identifier, documentContext, index);
+    if (visibleSymbol) {
+        return visibleSymbol;
+    }
+
+    const typeReference = findTypeByName(identifier, index, documentContext);
+    if (typeReference) {
+        return typeReference;
+    }
+
+    return null;
+}
+
+function resolveIdentifierSymbol(identifier, documentContext, index, predicate = null) {
+    for (const symbol of collectVisibleSymbols(documentContext, index, predicate)) {
+        if (symbol.name === identifier) {
+            return symbol;
+        }
+    }
+
+    return null;
+}
+
+function resolveScopeOrTypeReference(pathExpression, index, documentContext) {
+    if (!pathExpression) {
+        return null;
+    }
+
+    const resolvedPath = resolveScopePathExpression(pathExpression, documentContext, index);
+    const scope = index.scopes.get(resolvedPath);
+    if (scope && scope.kind !== "root") {
+        return {
+            kind: scope.kind,
+            name: scope.name,
+            fqName: scope.fqName,
+            detail: `${scope.kind} ${scope.fqName}`,
+            location: scope.location
+        };
+    }
+
+    const typeInfo = index.types.get(resolvedPath);
+    if (typeInfo) {
+        return {
+            kind: typeInfo.kind,
+            name: typeInfo.name,
+            fqName: typeInfo.fqName,
+            detail: `${typeInfo.kind} ${typeInfo.fqName}`,
+            location: typeInfo.location
+        };
+    }
+
+    return null;
+}
+
+function makeAliasReference(aliasName, aliasTarget, index) {
+    const aliasScopePath = aliasTarget.split("::").slice(0, -1).join("::");
+    const emptyContext = {
+        scopePath: "",
+        realmScopePath: "",
+        aliases: new Map(),
+        localTypes: new Map(),
+        selfType: null
+    };
+    const targetReference = findTypeByName(aliasTarget.split("::").at(-1), index, {
+        scopePath: aliasScopePath,
+        realmScopePath: aliasScopePath
+    }) || resolveScopeOrTypeReference(aliasTarget, index, emptyContext);
+
+    return {
+        kind: "alias",
+        name: aliasName,
+        fqName: aliasTarget,
+        detail: `alias ${aliasName} -> ${aliasTarget}`,
+        location: targetReference?.location || null
+    };
+}
+
+function findTypeByName(typeName, index, documentContext) {
+    if (!typeName) {
+        return null;
+    }
+
+    const scopedCandidate = documentContext.scopePath ? `${documentContext.scopePath}::${typeName}` : typeName;
+    const preferredMatch = index.types.get(scopedCandidate);
+    if (preferredMatch) {
+        return {
+            kind: preferredMatch.kind,
+            name: preferredMatch.name,
+            fqName: preferredMatch.fqName,
+            detail: `${preferredMatch.kind} ${preferredMatch.fqName}`,
+            location: preferredMatch.location
+        };
+    }
+
+    for (const [fqName, typeInfo] of index.types.entries()) {
+        if (fqName === typeName || fqName.endsWith(`::${typeName}`)) {
+            return {
+                kind: typeInfo.kind,
+                name: typeInfo.name,
+                fqName: typeInfo.fqName,
+                detail: `${typeInfo.kind} ${typeInfo.fqName}`,
+                location: typeInfo.location
+            };
+        }
+    }
+
+    return null;
+}
+
+function findLocalDefinition(document, position, identifier) {
+    const prefix = document.getText(new vscode.Range(new vscode.Position(0, 0), position));
+    const variableRegex = /\b(?:let|mut|const)\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?::\s*([^=;\n]+))?(?:=\s*([^;\n]+))?/g;
+    let match;
+    let lastMatch = null;
+
+    while ((match = variableRegex.exec(prefix)) !== null) {
+        if (match[1] !== identifier) {
+            continue;
+        }
+
+        lastMatch = {
+            offset: match.index + match[0].indexOf(match[1]),
+            typeText: match[2]?.trim() || inferTypeFromInitializer(match[3]?.trim() || "") || "unknown"
+        };
+    }
+
+    const parameterDefinition = findNearestParameterDefinition(prefix, identifier);
+    const chosenLocal = lastMatch && (!parameterDefinition || lastMatch.offset > parameterDefinition.offset)
+        ? lastMatch
+        : parameterDefinition;
+
+    if (!chosenLocal) {
+        return null;
+    }
+
+    const startPosition = document.positionAt(chosenLocal.offset);
+    return {
+        kind: "local",
+        name: identifier,
+        fqName: identifier,
+        detail: `${identifier}: ${chosenLocal.typeText}`,
+        location: {
+            filePath: document.uri.fsPath,
+            line: startPosition.line + 1,
+            column: startPosition.character + 1
+        }
+    };
+}
+
+function findNearestParameterDefinition(prefixText, identifier) {
+    const functionMatches = [...prefixText.matchAll(/\bfn\s+[A-Za-z_][A-Za-z0-9_]*(?:\s*<[^>]+>)?\s*\(([^)]*)\)/g)];
+    const lastFunctionMatch = functionMatches.at(-1);
+    if (!lastFunctionMatch) {
+        return null;
+    }
+
+    const paramList = lastFunctionMatch[1];
+    const params = splitTopLevel(paramList, ",");
+    let runningOffset = lastFunctionMatch.index + lastFunctionMatch[0].indexOf(paramList);
+    for (const param of params) {
+        const trimmedParam = param.trim();
+        const paramMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(trimmedParam);
+        const paramOffset = prefixText.indexOf(trimmedParam, runningOffset);
+        if (paramMatch && paramMatch[1] === identifier && paramOffset >= 0) {
+            return {
+                offset: paramOffset + trimmedParam.indexOf(identifier),
+                typeText: paramMatch[2].trim()
+            };
+        }
+
+        runningOffset = Math.max(runningOffset, paramOffset + trimmedParam.length);
+    }
+
+    return null;
+}
+
+function toVscodeLocation(location) {
+    return new vscode.Location(
+        vscode.Uri.file(location.filePath),
+        new vscode.Position(Math.max(0, location.line - 1), Math.max(0, location.column - 1))
+    );
 }
 
 function extractUseCompletionContext(linePrefix) {
@@ -1010,7 +1600,7 @@ function extractScopeCompletionContext(linePrefix) {
 }
 
 function extractMemberCompletionContext(linePrefix) {
-    const match = /([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)?$/.exec(linePrefix);
+    const match = /([A-Za-z_][A-Za-z0-9_\.]*)\.([A-Za-z_][A-Za-z0-9_]*)?$/.exec(linePrefix);
     if (!match) {
         return null;
     }
@@ -1131,7 +1721,7 @@ function buildScopeCompletionItems(scopePathExpression, partial, index, document
 }
 
 function buildMemberCompletionItems(receiverName, partial, documentContext, index) {
-    const resolvedType = resolveReceiverType(receiverName, documentContext, index);
+    const resolvedType = resolveExpressionType(receiverName, documentContext, index);
     if (!resolvedType) {
         return [];
     }
@@ -1172,6 +1762,86 @@ function buildMemberCompletionItems(receiverName, partial, documentContext, inde
     return dedupeCompletionItems(items);
 }
 
+function buildAttributeArgumentCompletionItems(attributeArgumentContext, documentContext, index) {
+    const { attributeName, partial } = attributeArgumentContext;
+    const prefix = partial.toLowerCase();
+    const items = [];
+
+    if (attributeName === "Default") {
+        for (const access of ["public", "private", "protected"]) {
+            if (prefix.length > 0 && !access.startsWith(prefix)) {
+                continue;
+            }
+
+            const item = new vscode.CompletionItem(access, vscode.CompletionItemKind.Keyword);
+            item.detail = `access modifier`;
+            item.insertText = access;
+            items.push(item);
+        }
+
+        return items;
+    }
+
+    if (attributeName === "Instantiate" || attributeName === "From" || attributeName === "Trust" || attributeName === "Type") {
+        items.push(...buildTypeNameCompletionItems(prefix, documentContext, index, {
+            primitivesOnly: attributeName === "Type"
+        }));
+        return dedupeCompletionItems(items);
+    }
+
+    return [];
+}
+
+function buildTypeNameCompletionItems(prefix, documentContext, index, options = {}) {
+    const items = [];
+    const primitiveTypes = [
+        "i8", "i16", "i32", "i64",
+        "u8", "u16", "u32", "u64",
+        "f32", "f64",
+        "isize", "usize",
+        "byte", "bool", "char", "uchar", "string", "void", "object"
+    ];
+
+    for (const primitiveType of primitiveTypes) {
+        if (prefix.length > 0 && !primitiveType.toLowerCase().startsWith(prefix)) {
+            continue;
+        }
+
+        const item = new vscode.CompletionItem(primitiveType, vscode.CompletionItemKind.TypeParameter);
+        item.detail = "primitive type";
+        item.insertText = primitiveType;
+        item.sortText = `0_${primitiveType}`;
+        items.push(item);
+    }
+
+    if (options.primitivesOnly) {
+        return items;
+    }
+
+    for (const symbol of collectVisibleSymbols(documentContext, index, (symbol) => symbol.kind === "type" || symbol.kind === "alias")) {
+        if (prefix.length > 0 && !symbol.name.toLowerCase().startsWith(prefix)) {
+            continue;
+        }
+
+        items.push(makeSymbolCompletionItem(symbol));
+    }
+
+    for (const [alias, fullPath] of documentContext.aliases.entries()) {
+        const aliasReference = resolveImportedAliasReference(alias, fullPath, index);
+        if (!aliasReference || !isTypeLikeReference(aliasReference)) {
+            continue;
+        }
+
+        if (prefix.length > 0 && !alias.toLowerCase().startsWith(prefix)) {
+            continue;
+        }
+
+        items.push(makeImportedAliasCompletionItem(alias, fullPath, aliasReference));
+    }
+
+    return items;
+}
+
 function buildIdentifierCompletionItems(partial, documentContext, index) {
     const prefix = partial.toLowerCase();
     const items = [];
@@ -1200,20 +1870,12 @@ function buildIdentifierCompletionItems(partial, documentContext, index) {
         items.push(item);
     }
 
-    const visibleScopes = buildVisibleScopeChain(documentContext.scopePath);
-    for (const scopePath of visibleScopes) {
-        const scope = index.scopes.get(scopePath);
-        if (!scope) {
+    for (const symbol of collectVisibleSymbols(documentContext, index)) {
+        if (prefix.length > 0 && !symbol.name.toLowerCase().startsWith(prefix)) {
             continue;
         }
 
-        for (const symbol of scope.symbols) {
-            if (prefix.length > 0 && !symbol.name.toLowerCase().startsWith(prefix)) {
-                continue;
-            }
-
-            items.push(makeSymbolCompletionItem(symbol));
-        }
+        items.push(makeSymbolCompletionItem(symbol));
     }
 
     return dedupeCompletionItems(items);
@@ -1244,6 +1906,181 @@ function buildAttributeCompletionItems(partial) {
     return items;
 }
 
+function collectVisibleSymbols(documentContext, index, predicate = null) {
+    const symbols = [];
+    const seen = new Set();
+    const candidateScopes = new Set([
+        ...buildVisibleScopeChain(documentContext.scopePath || ""),
+        ...buildVisibleScopeChain(documentContext.realmScopePath || "")
+    ]);
+
+    for (const scopePath of candidateScopes) {
+        const scope = index.scopes.get(scopePath);
+        if (!scope) {
+            continue;
+        }
+
+        for (const symbol of scope.symbols) {
+            if (!isSymbolVisibleInDocumentContext(symbol, scopePath, documentContext)) {
+                continue;
+            }
+
+            if (predicate && !predicate(symbol)) {
+                continue;
+            }
+
+            const key = `${scopePath}:${symbol.kind}:${symbol.name}:${symbol.fqName}`;
+            if (seen.has(key)) {
+                continue;
+            }
+
+            seen.add(key);
+            symbols.push(symbol);
+        }
+    }
+
+    for (const importedSymbol of collectImportedModuleSymbols(documentContext, index, predicate)) {
+        const key = `import:${importedSymbol.kind}:${importedSymbol.name}:${importedSymbol.fqName}`;
+        if (seen.has(key)) {
+            continue;
+        }
+
+        seen.add(key);
+        symbols.push(importedSymbol);
+    }
+
+    return symbols;
+}
+
+function isSymbolVisibleInDocumentContext(symbol, scopePath, documentContext) {
+    if (scopePath !== "") {
+        return true;
+    }
+
+    if (!symbol.location?.filePath || !documentContext.filePath) {
+        return true;
+    }
+
+    return normalizeFsPath(symbol.location.filePath) === normalizeFsPath(documentContext.filePath);
+}
+
+function resolveImportedAliasReference(aliasName, fullPath, index) {
+    const emptyContext = createEmptyDocumentContext();
+    const resolved = resolveScopeOrTypeReference(fullPath, index, emptyContext);
+    if (resolved) {
+        return resolved;
+    }
+
+    for (const scope of index.scopes.values()) {
+        const symbol = scope.symbols.find((entry) => entry.name === aliasName && entry.fqName === fullPath);
+        if (symbol) {
+            return symbol;
+        }
+    }
+
+    return null;
+}
+
+function collectImportedModuleSymbols(documentContext, index, predicate = null) {
+    const importedSymbols = [];
+
+    for (const imported of documentContext.imports || []) {
+        if (imported.explicitAlias) {
+            continue;
+        }
+
+        const visibleContext = {
+            ...createEmptyDocumentContext(),
+            filePath: documentContext.filePath,
+            scopePath: documentContext.scopePath,
+            realmScopePath: documentContext.realmScopePath
+        };
+        const resolvedScopePath = resolveScopePathExpression(imported.fullPath, visibleContext, index);
+        const importedScope = index.scopes.get(resolvedScopePath);
+        if (importedScope) {
+            for (const symbol of importedScope.symbols) {
+                if (predicate && !predicate(symbol)) {
+                    continue;
+                }
+                importedSymbols.push(symbol);
+            }
+        }
+
+        const importedFilePath = resolveModuleFilePath(imported.fullPath, documentContext, index);
+        if (!importedFilePath) {
+            continue;
+        }
+
+        const normalizedImportedFilePath = normalizeFsPath(importedFilePath);
+        const rootScope = index.scopes.get("");
+        for (const symbol of rootScope?.symbols || []) {
+            if (normalizeFsPath(symbol.location?.filePath || "") !== normalizedImportedFilePath) {
+                continue;
+            }
+
+            if (predicate && !predicate(symbol)) {
+                continue;
+            }
+
+            importedSymbols.push(symbol);
+        }
+    }
+
+    return importedSymbols;
+}
+
+function resolveModuleFilePath(modulePathExpression, documentContext, index) {
+    const normalizedModuleSuffix = `${modulePathExpression.replace(/::/g, "/")}.wio`.toLowerCase();
+    const currentDirectory = documentContext.filePath ? path.dirname(documentContext.filePath) : "";
+
+    const directCandidates = [];
+    if (modulePathExpression.startsWith("self::")) {
+        const relativeSegments = modulePathExpression.slice("self::".length).split("::");
+        directCandidates.push(path.join(currentDirectory, ...relativeSegments) + ".wio");
+    } else if (modulePathExpression.startsWith("super::")) {
+        const rawSegments = modulePathExpression.split("::");
+        let baseDirectory = currentDirectory;
+        let segmentIndex = 0;
+        while (rawSegments[segmentIndex] === "super") {
+            baseDirectory = path.dirname(baseDirectory);
+            segmentIndex += 1;
+        }
+        directCandidates.push(path.join(baseDirectory, ...rawSegments.slice(segmentIndex)) + ".wio");
+    } else {
+        directCandidates.push(path.join(currentDirectory, ...modulePathExpression.split("::")) + ".wio");
+    }
+
+    for (const candidate of directCandidates) {
+        if (candidate && fs.existsSync(candidate)) {
+            return candidate;
+        }
+    }
+
+    for (const indexedFilePath of index.files || []) {
+        if (normalizeFsPath(indexedFilePath).endsWith(`/${normalizedModuleSuffix}`) || normalizeFsPath(indexedFilePath).endsWith(normalizedModuleSuffix)) {
+            return indexedFilePath;
+        }
+    }
+
+    return null;
+}
+
+function createEmptyDocumentContext() {
+    return {
+        filePath: "",
+        imports: [],
+        scopePath: "",
+        realmScopePath: "",
+        aliases: new Map(),
+        localTypes: new Map(),
+        selfType: null
+    };
+}
+
+function isTypeLikeReference(reference) {
+    return new Set(["type", "alias", "object", "component", "interface", "enum", "flagset", "flag"]).has(reference.kind);
+}
+
 function resolveCallableSignatures(calleeExpression, documentContext, index) {
     const cleanedCallee = calleeExpression.replace(/\s*<[^<>]*>\s*$/, "").trim();
 
@@ -1253,7 +2090,7 @@ function resolveCallableSignatures(calleeExpression, documentContext, index) {
             return [];
         }
 
-        const resolvedType = resolveReceiverType(match[1], documentContext, index);
+        const resolvedType = resolveExpressionType(match[1], documentContext, index);
         if (!resolvedType) {
             return [];
         }
@@ -1293,22 +2130,39 @@ function resolveCallableSignatures(calleeExpression, documentContext, index) {
         return scope.symbols.filter((symbol) => symbol.name === symbolName && (symbol.kind === "function" || symbol.kind === "method"));
     }
 
-    const localMatches = [];
-    for (const scope of index.scopes.values()) {
-        for (const symbol of scope.symbols) {
-            if (symbol.name === cleanedCallee && (symbol.kind === "function" || symbol.kind === "method")) {
-                localMatches.push(symbol);
-            }
-        }
-    }
+    const visibleMatch = resolveIdentifierSymbol(
+        cleanedCallee,
+        documentContext,
+        index,
+        (symbol) => symbol.kind === "function" || symbol.kind === "method"
+    );
 
-    return localMatches;
+    return visibleMatch ? [visibleMatch] : [];
 }
 
 function makeScopeCompletionItem(name, kind, fqName) {
     const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Module);
     item.detail = `${kind} ${fqName}`;
     item.insertText = name;
+    return item;
+}
+
+function makeImportedAliasCompletionItem(aliasName, fullPath, reference) {
+    const kindMap = {
+        type: vscode.CompletionItemKind.Class,
+        alias: vscode.CompletionItemKind.Class,
+        object: vscode.CompletionItemKind.Class,
+        component: vscode.CompletionItemKind.Struct,
+        interface: vscode.CompletionItemKind.Interface,
+        enum: vscode.CompletionItemKind.Enum,
+        flagset: vscode.CompletionItemKind.Enum,
+        flag: vscode.CompletionItemKind.Struct
+    };
+
+    const item = new vscode.CompletionItem(aliasName, kindMap[reference.kind] || vscode.CompletionItemKind.Class);
+    item.detail = `imported alias for ${fullPath}`;
+    item.insertText = aliasName;
+    item.sortText = `1_${aliasName}`;
     return item;
 }
 
@@ -1406,6 +2260,7 @@ async function getWorkspaceSymbolIndex(activeDocument) {
             continue;
         }
 
+        index.files.add(filePath);
         parseWioTextIntoIndex(text, filePath, index);
     }
 
@@ -1420,13 +2275,15 @@ function createEmptyIndex() {
         name: "",
         kind: "root",
         childScopes: new Set(),
-        symbols: []
+        symbols: [],
+        location: null
     });
 
     return {
         scopes,
         types: new Map(),
-        typeAliases: new Map()
+        typeAliases: new Map(),
+        files: new Set()
     };
 }
 
@@ -1435,7 +2292,8 @@ function parseWioTextIntoIndex(text, filePath, index) {
     const scopeStack = [{ fqName: "", kind: "root", braceDepth: 0 }];
     let braceDepth = 0;
 
-    for (const line of lines) {
+    for (let lineNumber = 0; lineNumber < lines.length; ++lineNumber) {
+        const line = lines[lineNumber];
         const sanitizedLine = stripLineComment(line);
         const trimmedLine = sanitizedLine.trim();
         const openCount = countChar(sanitizedLine, "{");
@@ -1448,7 +2306,8 @@ function parseWioTextIntoIndex(text, filePath, index) {
             if (realmMatch) {
                 const realmName = realmMatch[1];
                 const realmFqName = qualifyName(currentScope.fqName, realmName);
-                ensureScope(index, realmFqName, realmName, "realm", currentScope.fqName);
+                const location = makeSourceLocation(filePath, lineNumber, sanitizedLine, realmName);
+                ensureScope(index, realmFqName, realmName, "realm", currentScope.fqName, location);
                 scopeStack.push({
                     fqName: realmFqName,
                     kind: "realm",
@@ -1465,12 +2324,13 @@ function parseWioTextIntoIndex(text, filePath, index) {
                 const typeName = typeMatch[2];
                 const typeFqName = qualifyName(currentScope.fqName, typeName);
                 const genericSuffix = typeMatch[3] || "";
-                const typeSymbol = makeTypeSymbol(typeName, typeFqName, typeKind, genericSuffix);
+                const location = makeSourceLocation(filePath, lineNumber, sanitizedLine, typeName);
+                const typeSymbol = makeTypeSymbol(typeName, typeFqName, typeKind, genericSuffix, location);
                 addScopeSymbol(index, currentScope.fqName, typeSymbol);
-                ensureType(index, typeFqName, typeName, typeKind, currentScope.fqName);
+                ensureType(index, typeFqName, typeName, typeKind, currentScope.fqName, location);
 
                 if (trimmedLine.includes("{")) {
-                    ensureScope(index, typeFqName, typeName, typeKind, currentScope.fqName);
+                    ensureScope(index, typeFqName, typeName, typeKind, currentScope.fqName, location);
                     scopeStack.push({
                         fqName: typeFqName,
                         kind: typeKind,
@@ -1489,12 +2349,14 @@ function parseWioTextIntoIndex(text, filePath, index) {
                 const genericSuffix = typeAliasMatch[2] || "";
                 const aliasedType = typeAliasMatch[3].trim();
                 const aliasFqName = qualifyName(currentScope.fqName, aliasName);
+                const location = makeSourceLocation(filePath, lineNumber, sanitizedLine, aliasName);
                 index.typeAliases.set(aliasFqName, aliasedType);
                 addScopeSymbol(index, currentScope.fqName, {
                     kind: "alias",
                     name: aliasName,
                     fqName: aliasFqName,
-                    detail: `type ${aliasName}${genericSuffix} = ${aliasedType}`
+                    detail: `type ${aliasName}${genericSuffix} = ${aliasedType}`,
+                    location
                 });
             }
 
@@ -1505,7 +2367,8 @@ function parseWioTextIntoIndex(text, filePath, index) {
                 const params = parseParameterList(functionMatch[3]);
                 const returnType = (functionMatch[4] || "void").trim();
                 const functionFqName = qualifyName(currentScope.fqName, functionName);
-                const functionSymbol = makeCallableSymbol("function", functionName, functionFqName, params, returnType, genericSuffix);
+                const location = makeSourceLocation(filePath, lineNumber, sanitizedLine, functionName);
+                const functionSymbol = makeCallableSymbol("function", functionName, functionFqName, params, returnType, genericSuffix, location);
                 addScopeSymbol(index, currentScope.fqName, functionSymbol);
 
                 if (isTypeScopeKind(currentScope.kind)) {
@@ -1532,7 +2395,8 @@ function parseWioTextIntoIndex(text, filePath, index) {
                     const params = parseParameterList(methodMatch[2]);
                     const returnType = (methodMatch[3] || "void").trim();
                     const methodFqName = qualifyName(currentScope.fqName, methodName);
-                    const methodSymbol = makeCallableSymbol("method", methodName, methodFqName, params, returnType, "");
+                    const location = makeSourceLocation(filePath, lineNumber, sanitizedLine, methodName);
+                    const methodSymbol = makeCallableSymbol("method", methodName, methodFqName, params, returnType, "", location);
                     addScopeSymbol(index, currentScope.fqName, methodSymbol);
                     ensureType(index, currentScope.fqName, path.basename(currentScope.fqName), currentScope.kind, "");
                     index.types.get(currentScope.fqName).methods.push(methodSymbol);
@@ -1551,12 +2415,14 @@ function parseWioTextIntoIndex(text, filePath, index) {
                     const fieldName = fieldMatch[1];
                     const fieldType = fieldMatch[2].trim();
                     const fieldFqName = qualifyName(currentScope.fqName, fieldName);
+                    const location = makeSourceLocation(filePath, lineNumber, sanitizedLine, fieldName);
                     const fieldSymbol = {
                         kind: "field",
                         name: fieldName,
                         fqName: fieldFqName,
                         typeText: fieldType,
-                        detail: `${fieldName}: ${fieldType}`
+                        detail: `${fieldName}: ${fieldType}`,
+                        location
                     };
                     addScopeSymbol(index, currentScope.fqName, fieldSymbol);
                     ensureType(index, currentScope.fqName, path.basename(currentScope.fqName), currentScope.kind, "");
@@ -1570,15 +2436,18 @@ function parseWioTextIntoIndex(text, filePath, index) {
     }
 }
 
-function ensureScope(index, fqName, name, kind, parentFqName) {
+function ensureScope(index, fqName, name, kind, parentFqName, location = null) {
     if (!index.scopes.has(fqName)) {
         index.scopes.set(fqName, {
             fqName,
             name,
             kind,
             childScopes: new Set(),
-            symbols: []
+            symbols: [],
+            location
         });
+    } else if (location && !index.scopes.get(fqName).location) {
+        index.scopes.get(fqName).location = location;
     }
 
     const parentScope = index.scopes.get(parentFqName);
@@ -1587,7 +2456,7 @@ function ensureScope(index, fqName, name, kind, parentFqName) {
     }
 }
 
-function ensureType(index, fqName, name, kind, parentFqName) {
+function ensureType(index, fqName, name, kind, parentFqName, location = null) {
     if (!index.types.has(fqName)) {
         index.types.set(fqName, {
             fqName,
@@ -1595,8 +2464,11 @@ function ensureType(index, fqName, name, kind, parentFqName) {
             kind,
             parentFqName,
             fields: [],
-            methods: []
+            methods: [],
+            location
         });
+    } else if (location && !index.types.get(fqName).location) {
+        index.types.get(fqName).location = location;
     }
 }
 
@@ -1617,16 +2489,17 @@ function addScopeSymbol(index, scopeFqName, symbol) {
     }
 }
 
-function makeTypeSymbol(name, fqName, typeKind, genericSuffix) {
+function makeTypeSymbol(name, fqName, typeKind, genericSuffix, location = null) {
     return {
         kind: "type",
         name,
         fqName,
-        detail: `${typeKind} ${name}${genericSuffix}`
+        detail: `${typeKind} ${name}${genericSuffix}`,
+        location
     };
 }
 
-function makeCallableSymbol(kind, name, fqName, params, returnType, genericSuffix) {
+function makeCallableSymbol(kind, name, fqName, params, returnType, genericSuffix, location = null) {
     const signature = `${name}${genericSuffix}(${params.join(", ")}) -> ${returnType}`;
     return {
         kind,
@@ -1635,7 +2508,17 @@ function makeCallableSymbol(kind, name, fqName, params, returnType, genericSuffi
         params,
         returnType,
         signature,
-        detail: signature
+        detail: signature,
+        location
+    };
+}
+
+function makeSourceLocation(filePath, zeroBasedLine, lineText, identifier) {
+    const columnIndex = Math.max(0, lineText.indexOf(identifier));
+    return {
+        filePath,
+        line: zeroBasedLine + 1,
+        column: columnIndex + 1
     };
 }
 
@@ -1757,28 +2640,46 @@ function buildVisibleScopeChain(scopePath) {
 function buildDocumentContext(document, position, index) {
     const text = document.getText();
     const prefix = document.getText(new vscode.Range(new vscode.Position(0, 0), position));
+    const imports = parseUseStatements(text);
     return {
-        aliases: parseUseAliases(text),
-        scopePath: computeScopePathAtPosition(text, position),
+        filePath: document.uri.fsPath,
+        imports,
+        aliases: parseUseAliases(imports),
+        scopePath: computeFullScopePathAtPosition(text, position),
+        realmScopePath: computeRealmScopePathAtPosition(text, position),
         localTypes: collectVisibleLocalTypes(prefix),
         selfType: computeSelfTypeAtPosition(text, position, index),
         index
     };
 }
 
-function parseUseAliases(text) {
-    const aliases = new Map();
+function parseUseStatements(text) {
+    const imports = [];
     const useRegex = /^\s*use\s+([A-Za-z_][A-Za-z0-9_:]*)(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?\s*;/gm;
     let match;
     while ((match = useRegex.exec(text)) !== null) {
         const fullPath = match[1];
-        const alias = match[2] || fullPath.split("::").pop();
-        aliases.set(alias, fullPath);
+        const explicitAlias = typeof match[2] === "string" && match[2].length > 0;
+        imports.push({
+            fullPath,
+            alias: match[2] || fullPath.split("::").pop(),
+            explicitAlias
+        });
     }
+
+    return imports;
+}
+
+function parseUseAliases(imports) {
+    const aliases = new Map();
+    for (const imported of imports) {
+        aliases.set(imported.alias, imported.fullPath);
+    }
+
     return aliases;
 }
 
-function computeScopePathAtPosition(text, position) {
+function computeScopeStackAtPosition(text, position) {
     const lines = text.split(/\r?\n/).slice(0, position.line + 1);
     const stack = [];
     let braceDepth = 0;
@@ -1817,55 +2718,31 @@ function computeScopePathAtPosition(text, position) {
         popClosedScopes(stack, braceDepth);
     }
 
-    return stack.filter((entry) => entry.kind === "realm").map((entry) => entry.name).join("::");
+    return stack;
+}
+
+function computeRealmScopePathAtPosition(text, position) {
+    return computeScopeStackAtPosition(text, position)
+        .filter((entry) => entry.kind === "realm")
+        .map((entry) => entry.name)
+        .join("::");
+}
+
+function computeFullScopePathAtPosition(text, position) {
+    return computeScopeStackAtPosition(text, position)
+        .filter((entry) => entry.kind === "realm" || isTypeScopeKind(entry.kind))
+        .map((entry) => entry.name)
+        .join("::");
 }
 
 function computeSelfTypeAtPosition(text, position, index) {
-    const lines = text.split(/\r?\n/).slice(0, position.line + 1);
-    const stack = [];
-    let braceDepth = 0;
-
-    for (const line of lines) {
-        const sanitizedLine = stripLineComment(line);
-        const trimmedLine = sanitizedLine.trim();
-        const openCount = countChar(sanitizedLine, "{");
-        const closeCount = countChar(sanitizedLine, "}");
-        const currentScopePath = stack.map((entry) => entry.name).join("::");
-
-        const realmMatch = /\brealm\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/.exec(trimmedLine);
-        if (realmMatch) {
-            stack.push({
-                name: realmMatch[1],
-                kind: "realm",
-                braceDepth: braceDepth + openCount
-            });
-            braceDepth += openCount - closeCount;
-            popClosedScopes(stack, braceDepth);
-            continue;
-        }
-
-        const typeMatch = /\b(object|component|interface|enum|flagset|flag)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/.exec(trimmedLine);
-        if (typeMatch) {
-            stack.push({
-                name: typeMatch[2],
-                kind: typeMatch[1],
-                braceDepth: braceDepth + openCount
-            });
-            braceDepth += openCount - closeCount;
-            popClosedScopes(stack, braceDepth);
-            continue;
-        }
-
-        braceDepth += openCount - closeCount;
-        popClosedScopes(stack, braceDepth);
-    }
-
-    const typeSegments = stack.filter((entry) => isTypeScopeKind(entry.kind)).map((entry) => entry.name);
+    const scopeStack = computeScopeStackAtPosition(text, position);
+    const typeSegments = scopeStack.filter((entry) => isTypeScopeKind(entry.kind)).map((entry) => entry.name);
     if (typeSegments.length === 0) {
         return null;
     }
 
-    const realmSegments = stack.filter((entry) => entry.kind === "realm").map((entry) => entry.name);
+    const realmSegments = scopeStack.filter((entry) => entry.kind === "realm").map((entry) => entry.name);
     const fqName = [...realmSegments, ...typeSegments].join("::");
     return index.types.has(fqName) ? fqName : null;
 }
@@ -1971,14 +2848,28 @@ function resolveScopePathExpression(scopePathExpression, documentContext, index)
         return candidatePath;
     }
 
+    const candidateBaseScopes = [];
     if (documentContext.scopePath) {
-        const relativeCandidate = qualifyName(documentContext.scopePath, candidatePath);
+        candidateBaseScopes.push(...buildVisibleScopeChain(documentContext.scopePath));
+    }
+    if (documentContext.realmScopePath && documentContext.realmScopePath !== documentContext.scopePath) {
+        candidateBaseScopes.push(...buildVisibleScopeChain(documentContext.realmScopePath));
+    }
+
+    const seenScopes = new Set();
+    for (const baseScope of candidateBaseScopes) {
+        if (!baseScope || seenScopes.has(baseScope)) {
+            continue;
+        }
+
+        seenScopes.add(baseScope);
+        const relativeCandidate = qualifyName(baseScope, candidatePath);
         if (index.scopes.has(relativeCandidate) || index.types.has(relativeCandidate)) {
             return relativeCandidate;
         }
     }
 
-    return index.scopes.has(candidateSegments[0]) ? candidateSegments[0] : candidatePath;
+    return candidatePath;
 }
 
 function resolveReceiverType(receiverName, documentContext, index) {
@@ -1995,6 +2886,64 @@ function resolveReceiverType(receiverName, documentContext, index) {
     }
 
     return normalizeTypeDescriptor(explicitType, index.typeAliases);
+}
+
+function resolveExpressionType(expressionText, documentContext, index) {
+    const segments = expressionText.split(".").filter((segment) => segment.length > 0);
+    if (segments.length === 0) {
+        return null;
+    }
+
+    let currentType = resolveReceiverType(segments[0], documentContext, index);
+    if (!currentType && documentContext.selfType) {
+        const selfTypeInfo = index.types.get(documentContext.selfType);
+        const implicitField = selfTypeInfo?.fields.find((field) => field.name === segments[0]);
+        if (implicitField) {
+            currentType = normalizeTypeDescriptor(implicitField.typeText, index.typeAliases);
+        }
+    }
+
+    if (!currentType) {
+        return null;
+    }
+
+    for (let indexInChain = 1; indexInChain < segments.length; ++indexInChain) {
+        currentType = resolveMemberResultType(currentType, segments[indexInChain], index);
+        if (!currentType) {
+            return null;
+        }
+    }
+
+    return currentType;
+}
+
+function resolveMemberResultType(receiverType, memberName, index) {
+    const builtinMembers = BUILTIN_MEMBER_CATALOG[receiverType.kind] || [];
+    const builtinMember = builtinMembers.find((entry) => entry.name === memberName);
+    if (builtinMember) {
+        return normalizeTypeDescriptor(builtinMember.returnType, index.typeAliases);
+    }
+
+    if (receiverType.kind !== "user" || !receiverType.fqName) {
+        return null;
+    }
+
+    const typeInfo = index.types.get(receiverType.fqName);
+    if (!typeInfo) {
+        return null;
+    }
+
+    const field = typeInfo.fields.find((entry) => entry.name === memberName);
+    if (field) {
+        return normalizeTypeDescriptor(field.typeText, index.typeAliases);
+    }
+
+    const method = typeInfo.methods.find((entry) => entry.name === memberName);
+    if (method) {
+        return normalizeTypeDescriptor(method.returnType || "void", index.typeAliases);
+    }
+
+    return null;
 }
 
 function normalizeTypeDescriptor(typeText, typeAliases) {
@@ -2086,6 +3035,10 @@ function safeReadFile(filePath) {
 
 function normalizeFsPath(fsPath) {
     return fsPath.replace(/\\/g, "/").toLowerCase();
+}
+
+function escapeRegex(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function isReservedWord(identifier) {
