@@ -15,6 +15,12 @@ const IGNORED_INDEX_PATH_SEGMENTS = [
     "/dist/"
 ];
 
+const PROJECT_MANIFEST_NAMES = [
+    "wio.makewio",
+    "makewio",
+    "wio.project.json"
+];
+
 const COLLECTION_ALIAS_KINDS = new Map([
     ["Array", "array"],
     ["DynArray", "array"],
@@ -194,7 +200,8 @@ function activate(context) {
                 return;
             }
 
-            if (!hasEntryFunction(document.getText())) {
+            const projectContext = findWioProjectContext(document);
+            if (!projectContext && !hasEntryFunction(document.getText())) {
                 vscode.window.showWarningMessage("The current Wio file does not seem to define `fn Entry(...)`.");
                 return;
             }
@@ -213,6 +220,12 @@ function activate(context) {
             const document = getActiveWioDocument();
             if (!document) {
                 vscode.window.showWarningMessage("Open a .wio file first.");
+                return;
+            }
+
+            const projectContext = findWioProjectContext(document);
+            if (projectContext) {
+                vscode.window.showWarningMessage("This file is inside a Wio project. `Emit C++ Current File` is single-file only; use project check/run so wio.makewio can provide native/host/link settings.");
                 return;
             }
 
@@ -552,10 +565,200 @@ function buildArguments(document, extraArgs) {
     return [document.uri.fsPath, ...mergedArgs];
 }
 
+
+function findWioProjectContext(document) {
+    if (!document?.uri?.fsPath) {
+        return null;
+    }
+
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+    const workspaceRoot = workspaceFolder?.uri?.fsPath ? path.resolve(workspaceFolder.uri.fsPath) : null;
+    let currentDir = path.resolve(path.dirname(document.uri.fsPath));
+
+    for (let depth = 0; depth < 32; ++depth) {
+        for (const manifestName of PROJECT_MANIFEST_NAMES) {
+            const manifestPath = path.join(currentDir, manifestName);
+            if (fs.existsSync(manifestPath)) {
+                return { root: currentDir, manifestPath, manifestName };
+            }
+        }
+
+        if (workspaceRoot && pathEquals(currentDir, workspaceRoot)) {
+            break;
+        }
+
+        const parentDir = path.dirname(currentDir);
+        if (parentDir === currentDir) {
+            break;
+        }
+        currentDir = parentDir;
+    }
+
+    return null;
+}
+
+function pathEquals(left, right) {
+    const normalizedLeft = path.normalize(left);
+    const normalizedRight = path.normalize(right);
+    return process.platform === "win32"
+        ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
+        : normalizedLeft === normalizedRight;
+}
+
+function buildInvocationForDocument(document, extraArgs, options) {
+    const projectContext = findWioProjectContext(document);
+    const preferProjectMode = getConfiguration().get("preferProjectMode", true);
+
+    if (projectContext && preferProjectMode) {
+        const projectInvocation = buildProjectInvocation(document, projectContext, options);
+        if (projectInvocation) {
+            return projectInvocation;
+        }
+    }
+
+    return {
+        mode: "file",
+        executableCandidates: getExecutableCandidates(document),
+        args: buildArguments(document, extraArgs),
+        cwd: getWorkingDirectory(document),
+        projectContext: null
+    };
+}
+
+function buildProjectInvocation(document, projectContext, options) {
+    const projectConfig = getConfiguration().get("projectConfig", "");
+    const normalizedProjectConfig = typeof projectConfig === "string" ? projectConfig.trim() : "";
+    const configureProject = Boolean(getConfiguration().get("projectConfigure", false));
+
+    if (options.reason === "backend-info") {
+        const runnerScript = findInvokeWioProjectScript(document, projectContext);
+        if (runnerScript) {
+            const args = ["-ExecutionPolicy", "Bypass", "-File", runnerScript, "-Project", projectContext.root, "-Describe"];
+            if (normalizedProjectConfig.length > 0) {
+                args.push("-Config", normalizedProjectConfig);
+            }
+            return {
+                mode: "project",
+                executableCandidates: getPowerShellCandidates(),
+                args,
+                cwd: projectContext.root,
+                projectContext
+            };
+        }
+    }
+
+    const scriptPath = findProjectScript(projectContext.root, options.reason);
+    if (scriptPath) {
+        const args = ["-ExecutionPolicy", "Bypass", "-File", scriptPath];
+        if (normalizedProjectConfig.length > 0) {
+            args.push("-Config", normalizedProjectConfig);
+        }
+        if (configureProject) {
+            args.push("-Configure");
+        }
+        return {
+            mode: "project",
+            executableCandidates: getPowerShellCandidates(),
+            args,
+            cwd: projectContext.root,
+            projectContext
+        };
+    }
+
+    const runnerScript = findInvokeWioProjectScript(document, projectContext);
+    if (!runnerScript) {
+        vscode.window.showWarningMessage(
+            "Found " + projectContext.manifestName + ", but could not find build.ps1/run.ps1 or Invoke-WioProject.ps1. Falling back to single-file Wio mode."
+        );
+        return null;
+    }
+
+    const args = ["-ExecutionPolicy", "Bypass", "-File", runnerScript, "-Project", projectContext.root];
+    if (options.reason !== "run") {
+        args.push("-NoRun");
+    }
+    if (normalizedProjectConfig.length > 0) {
+        args.push("-Config", normalizedProjectConfig);
+    }
+    if (configureProject) {
+        args.push("-Configure");
+    }
+
+    return {
+        mode: "project",
+        executableCandidates: getPowerShellCandidates(),
+        args,
+        cwd: projectContext.root,
+        projectContext
+    };
+}
+
+function findProjectScript(projectRoot, reason) {
+    const scriptNames = reason === "run" ? ["run.ps1", "build.ps1"] : ["build.ps1"];
+    for (const scriptName of scriptNames) {
+        const scriptPath = path.join(projectRoot, scriptName);
+        if (fs.existsSync(scriptPath)) {
+            return scriptPath;
+        }
+    }
+    return null;
+}
+
+function findInvokeWioProjectScript(document, projectContext) {
+    const candidates = [];
+    const appendCandidate = (candidate) => {
+        if (candidate && typeof candidate === "string" && candidate.trim().length > 0) {
+            candidates.push(path.normalize(candidate));
+        }
+    };
+
+    const wioRoot = process.env.WIO_ROOT || process.env.WIO_HOME;
+    if (wioRoot) {
+        appendCandidate(path.join(wioRoot, "scripts", "Invoke-WioProject.ps1"));
+    }
+
+    for (const workspaceFolder of vscode.workspace.workspaceFolders ?? []) {
+        appendCandidate(path.join(workspaceFolder.uri.fsPath, "scripts", "Invoke-WioProject.ps1"));
+    }
+
+    if (projectContext?.root) {
+        let currentDir = projectContext.root;
+        for (let depth = 0; depth < 8; ++depth) {
+            appendCandidate(path.join(currentDir, "scripts", "Invoke-WioProject.ps1"));
+            const parentDir = path.dirname(currentDir);
+            if (parentDir === currentDir) {
+                break;
+            }
+            currentDir = parentDir;
+        }
+    }
+
+    if (document?.uri?.fsPath) {
+        let currentDir = path.dirname(document.uri.fsPath);
+        for (let depth = 0; depth < 8; ++depth) {
+            appendCandidate(path.join(currentDir, "scripts", "Invoke-WioProject.ps1"));
+            const parentDir = path.dirname(currentDir);
+            if (parentDir === currentDir) {
+                break;
+            }
+            currentDir = parentDir;
+        }
+    }
+
+    return candidates.find((candidate) => fs.existsSync(candidate)) || null;
+}
+
+function getPowerShellCandidates() {
+    return process.platform === "win32"
+        ? ["powershell.exe", "pwsh.exe", "powershell", "pwsh"]
+        : ["pwsh", "powershell"];
+}
+
 async function runWioForDocument(document, extraArgs, options) {
-    const executableCandidates = getExecutableCandidates(document);
-    const args = buildArguments(document, extraArgs);
-    const cwd = getWorkingDirectory(document);
+    const invocation = buildInvocationForDocument(document, extraArgs, options);
+    const executableCandidates = invocation.executableCandidates;
+    const args = invocation.args;
+    const cwd = invocation.cwd;
 
     if (!options.automatic) {
         outputChannel.clear();
