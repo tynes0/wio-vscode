@@ -3,7 +3,7 @@
   "displayName": "Wio Language Support",
   "description": "First-class editing, diagnostics, project commands, and navigation for Wio 0.11.",
   "repository": "https://github.com/tynes0/wio-vscode",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "publisher": "local",
   "license": "MIT",
   "main": "./src/extension.js",
@@ -12,10 +12,16 @@
   },
   "extensionKind": ["workspace"],
   "categories": ["Programming Languages", "Linters", "Snippets"],
-  "activationEvents": ["onLanguage:wio"],
+  "activationEvents": [
+    "onLanguage:wio",
+    "workspaceContains:**/wio.makewio",
+    "workspaceContains:**/makewio",
+    "workspaceContains:**/wio.project.json"
+  ],
   "scripts": {
     "check": "node ./scripts/check.js",
     "test": "node --test ./test/*.test.js",
+    "test:integration": "node ./scripts/integration.js",
     "package": "npm run check && npm test && vsce package --no-dependencies"
   },
   "devDependencies": {
@@ -67,7 +73,7 @@
           "type": "array",
           "default": [],
           "items": { "type": "string" },
-          "description": "Extra compiler or project arguments passed to every Wio invocation."
+          "description": "Compatibility compiler arguments for manifest-free file invocations. Prefer standalone.compilerArgs for new configurations."
         },
         "wio.enableDiagnosticsOnSave": {
           "type": "boolean",
@@ -96,6 +102,29 @@
           "default": [],
           "items": { "type": "string" },
           "description": "Program arguments passed after `--` for file and project runs."
+        },
+        "wio.standalone.target": {
+          "type": "string",
+          "enum": ["auto", "exe", "static", "shared"],
+          "default": "auto",
+          "description": "Target for files outside a manifest. Auto uses exe for Entry/application files and static otherwise."
+        },
+        "wio.standalone.compilerArgs": {
+          "type": "array",
+          "default": [],
+          "items": { "type": "string" },
+          "description": "Include directories, native sources, link options, and other compiler arguments for manifest-free files."
+        },
+        "wio.project.checkOnNativeSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Rebuild the owning Wio project when a C/C++ source or header is saved."
+        },
+        "wio.project.commandArgs": {
+          "type": "array",
+          "default": [],
+          "items": { "type": "string" },
+          "description": "Extra project-level arguments such as --config or --build-dir. Native build settings should remain in the manifest."
         },
         "wio.index.maxFiles": {
           "type": "number",

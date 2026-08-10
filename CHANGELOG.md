@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.1
+
+- Routed files owned by a makewio/JSON manifest through full project
+  build/run/describe operations instead of losing native and source settings in
+  single-file mode.
+- Added explicit source-root membership so scratch files nested beside a
+  project remain standalone.
+- Standalone files without `Entry` now check as library targets; run is blocked
+  with an actionable explanation rather than a fake entry-point diagnostic.
+- Corrected C++ emission to avoid the invalid `file check --emit-cpp` pairing.
+- Added project-scoped diagnostic replacement, run-time compile diagnostics,
+  multi-root settings, and automatic project checks after native C/C++ saves.
+- Added real compiler fixtures for multi-file Wio, native-header/native-source
+  Wio+C++, standalone libraries, and standalone executables.
+
 ## 0.11.0
 
 - Rebuilt the extension around separate CLI, diagnostics, project, index, and

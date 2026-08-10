@@ -1,6 +1,7 @@
 "use strict";
 
 const path = require("node:path");
+const { parseDocument } = require("./sourceModel");
 
 const OPERATIONS = Object.freeze({
   CHECK: "check",
@@ -10,12 +11,9 @@ const OPERATIONS = Object.freeze({
 });
 
 function hasExecutableEntry(source) {
-  const text = String(source || "")
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/\/\/.*$/gm, " ")
-    .replace(/"(?:\\.|[^"\\])*"/g, " ");
-  return /\b(?:async\s+)?fn\s+Entry\s*(?:<[^>{}]*>)?\s*\(/u.test(text)
-    || /\bapplication\s+[A-Za-z_][A-Za-z0-9_]*\s*\{/u.test(text);
+  return parseDocument(String(source || "")).declarations.some((declaration) =>
+    !declaration.parent && ((declaration.kind === "fn" && declaration.name === "Entry") || declaration.kind === "application")
+  );
 }
 
 function hasArgument(args, name) {
@@ -34,21 +32,28 @@ function standaloneTarget(source, configuration = {}) {
 }
 
 function planProject(operation, project, configuration) {
-  const common = [...(configuration.defaultArgs || [])];
+  const common = [...(configuration.projectArgs || [])];
   const base = ["project"];
   if (operation === OPERATIONS.CHECK || operation === OPERATIONS.EMIT_CPP) {
     const args = [...base, "build", "--project", project.manifestPath, ...common];
-    if (operation === OPERATIONS.EMIT_CPP && !hasArgument(args, "--rebuild") && !hasArgument(args, "--configure")) args.push("--rebuild");
+    if (operation === OPERATIONS.EMIT_CPP) args.push("--emit-cpp");
     return { mode: "project", operation, args, cwd: project.root, project, diagnosticScope: project.manifestPath };
   }
   if (operation === OPERATIONS.RUN) {
+    if (project.metadata && project.metadata.target !== "exe" && !project.metadata.hostEnabled) {
+      return {
+        mode: "project", operation, cwd: project.root, project, diagnosticScope: project.manifestPath,
+        blocked: true,
+        message: `Project target '${project.metadata.target}' is a library and has no enabled host executable. Build it, or enable a host target before running.`
+      };
+    }
     const args = [...base, "run", "--project", project.manifestPath, ...common];
     if (configuration.runArgs?.length) args.push("--", ...configuration.runArgs);
     return { mode: "project", operation, args, cwd: project.root, project, diagnosticScope: project.manifestPath };
   }
   return {
     mode: "project", operation,
-    args: [...base, "describe", "--project", project.manifestPath],
+    args: [...base, "describe", "--project", project.manifestPath, ...common],
     cwd: project.root, project, diagnosticScope: project.manifestPath
   };
 }

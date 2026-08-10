@@ -1,0 +1,29 @@
+schemaVersion = 1
+name = "EditorLibraryFixture"
+template = "wio-static-library"
+
+[wio]
+entry = "wio/library.wio"
+target = "static"
+sourceRoots = ["wio"]
+includeDirs = []
+linkDirs = []
+linkLibraries = []
+nativeSources = []
+backendArgs = []
+
+[host]
+enabled = false
+
+[build]
+buildDir = ".wio-build"
+config = "Release"
+
+[outputs]
+directory = ".wio-build/interop"
+baseName = "editor_library_fixture"
+wioName = "editor_library_fixture"
+
+[run]
+args = []
+workingDirectory = "."

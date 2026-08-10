@@ -1,0 +1,26 @@
+schemaVersion = 1
+name = "EditorPureFixture"
+template = "wio-app"
+
+[wio]
+entry = "wio/main.wio"
+target = "exe"
+sourceRoots = ["wio"]
+includeDirs = []
+linkDirs = []
+linkLibraries = []
+nativeSources = []
+backendArgs = []
+
+[build]
+buildDir = ".wio-build"
+config = "Release"
+
+[outputs]
+directory = ".wio-build/interop"
+baseName = "editor_pure_fixture"
+wioName = "editor_pure_fixture"
+
+[run]
+args = []
+workingDirectory = "."

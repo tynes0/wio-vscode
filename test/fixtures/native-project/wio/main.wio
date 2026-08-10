@@ -1,0 +1,5 @@
+use native;
+
+fn Entry() -> i32 {
+    return editor_native::Multiply(6, 7) == 42 ? 0 : 1;
+}

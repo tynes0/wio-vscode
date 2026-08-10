@@ -4,6 +4,7 @@ const vscode = require("vscode");
 const { WioCli } = require("./cli");
 const { registerCommands } = require("./commands");
 const { registerProviders } = require("./providers");
+const { findOwningProjectContext, findProjectContext } = require("./project");
 const { WorkspaceIndex } = require("./workspaceIndex");
 
 let activeServices;
@@ -28,14 +29,20 @@ async function activate(context) {
 
   const timers = new Map();
   function scheduleDiagnostics(document, reason) {
-    if (document.languageId !== "wio") return;
+    const isWio = document.languageId === "wio";
+    const projectInput = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx|m|mm)$/iu.test(document.uri.fsPath)
+      || /(?:^|[\\/])(?:wio\.makewio|makewio|wio\.project\.json)$/iu.test(document.uri.fsPath);
+    if (!isWio && !(reason === "save" && projectInput)) return;
     const config = vscode.workspace.getConfiguration("wio", document.uri);
-    if (!config.get(reason === "open" ? "enableDiagnosticsOnOpen" : "enableDiagnosticsOnSave", true)) return;
-    const key = document.uri.toString();
+    if (isWio && !config.get(reason === "open" ? "enableDiagnosticsOnOpen" : "enableDiagnosticsOnSave", true)) return;
+    const project = isWio ? findOwningProjectContext(document.uri.fsPath) : findProjectContext(document.uri.fsPath);
+    if (!isWio && (!project || !config.get("project.checkOnNativeSave", true))) return;
+    const key = project?.manifestPath || document.uri.toString();
     clearTimeout(timers.get(key));
     timers.set(key, setTimeout(() => {
       timers.delete(key);
-      commands.runFile("check", document.uri, [], { diagnostics: true, key: "diagnostics", quiet: true });
+      if (project) commands.checkProject(project, { activeFile: isWio ? document.uri.fsPath : undefined, resourceUri: document.uri, quiet: true });
+      else commands.runDocument("check", document.uri, { diagnostics: true, quiet: true });
     }, config.get("diagnosticsDebounceMs", 250)));
   }
 
