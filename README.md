@@ -79,6 +79,7 @@ run against a real compiler:
 
 ```powershell
 $env:WIO_TEST_EXECUTABLE = "C:\\Wio\\bin\\wio.exe"
+$env:WIO_TEST_FORCE_REBUILD = "1" # optional packaged-toolchain qualification
 npm run test:integration
 ```
 
