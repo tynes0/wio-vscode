@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
-const { findProjectRoot } = require("../src/project");
+const { findProjectContext, findProjectRoot } = require("../src/project");
 
 test("finds the nearest Wio project manifest", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "wio-vscode-"));
@@ -16,4 +16,12 @@ test("finds the nearest Wio project manifest", (t) => {
   const file = path.join(nested, "main.wio");
   fs.writeFileSync(file, "fn Entry() -> i32 { return 0; }\n");
   assert.equal(findProjectRoot(file), root);
+  const context = findProjectContext(file);
+  assert.equal(context.root, root);
+  assert.equal(context.manifestName, "wio.makewio");
+  assert.equal(context.format, "makewio");
+});
+
+test("does not treat an arbitrary workspace folder as a Wio project", () => {
+  assert.equal(findProjectRoot(__filename), undefined);
 });
