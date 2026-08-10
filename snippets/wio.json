@@ -1,90 +1,82 @@
 {
   "Entry Function": {
     "prefix": "entry",
-    "body": [
-      "fn Entry(args: string[]) -> i32 {",
-      "    ${1:std::console::Print(\"Hello from Wio.\");}",
-      "    return ${2:0};",
-      "}"
-    ],
-    "description": "Create a standard Wio Entry function."
+    "body": ["fn Entry(args: string[]) -> i32 {", "    ${1:std::console::PrintLine(\"Hello from Wio.\");}", "    return ${2:0};", "}"],
+    "description": "Create a synchronous Wio entry point."
+  },
+  "Async Entry Function": {
+    "prefix": "async-entry",
+    "body": ["async fn Entry(args: string[]) -> i32 {", "    ${1:await std::async::Yield();}", "    return ${2:0};", "}"],
+    "description": "Create an asynchronous Wio entry point."
+  },
+  "Application": {
+    "prefix": "application",
+    "body": ["application ${1:DesktopApp} {", "    on start {", "        ${2}", "    }", "", "    on update {", "        ${3}", "    }", "", "    on close {", "        ${4}", "    }", "}"],
+    "description": "Create a Wio application lifecycle."
+  },
+  "Application System": {
+    "prefix": "system",
+    "body": ["system ${1:WorkspaceSystem} {", "    mut ${2:ready}: bool;", "", "    on start {", "        self.${2:ready} = false;", "        ${3}", "    }", "", "    on update {", "        ${4}", "    }", "", "    on close {", "        ${5}", "    }", "}"],
+    "description": "Create a stack-resident application system."
   },
   "Function": {
     "prefix": "fn",
-    "body": [
-      "fn ${1:Name}(${2})${3: -> void} {",
-      "    ${4}",
-      "}"
-    ],
+    "body": ["fn ${1:Name}(${2})${3: -> void} {", "    ${4}", "}"],
     "description": "Create a Wio function."
+  },
+  "Async Function": {
+    "prefix": "async-fn",
+    "body": ["async fn ${1:Load}(${2}) -> ${3:std::Result<string>} {", "    ${4}", "}"],
+    "description": "Create a Wio async function."
   },
   "Object": {
     "prefix": "object",
-    "body": [
-      "@Default(public)",
-      "object ${1:Entity} {",
-      "    ${2:id}: ${3:i32};",
-      "",
-      "    OnConstruct(${4:id}: ${3:i32}) {",
-      "        self.${2:id} = ${4:id};",
-      "    }",
-      "",
-      "    fn ${5:Render}() {",
-      "        ${6}",
-      "    }",
-      "}"
-    ],
-    "description": "Create a Wio object skeleton."
+    "body": ["object ${1:Entity} {", "    public ${2:id}: ${3:i32};", "", "    OnConstruct(${2:id}: ${3:i32}) {", "        self.${2:id} = ${2:id};", "    }", "", "    public fn ${4:Describe}() -> string {", "        ${5:return \"Entity\";}", "    }", "}"],
+    "description": "Create a managed Wio object."
   },
   "Component": {
     "prefix": "component",
-    "body": [
-      "@GenerateCtors",
-      "component ${1:Vector2} {",
-      "    ${2:x}: ${3:f32};",
-      "    ${4:y}: ${3:f32};",
-      "",
-      "    OnConstruct(${2:x}: ${3:f32}, ${4:y}: ${3:f32}) {",
-      "        self.${2:x} = ${2:x};",
-      "        self.${4:y} = ${4:y};",
-      "    }",
-      "}"
-    ],
-    "description": "Create a Wio component skeleton."
+    "body": ["component ${1:Vector2} {", "    ${2:x}: ${3:f32};", "    ${4:y}: ${3:f32};", "}"],
+    "description": "Create a stack-resident Wio component."
   },
-  "Interface": {
-    "prefix": "interface",
-    "body": [
-      "interface ${1:IRenderable} {",
-      "    fn ${2:Render}();",
-      "}"
-    ],
-    "description": "Create a Wio interface."
+  "Component Extension": {
+    "prefix": "extension",
+    "body": ["extension ${1:Vector2Extensions} for ${2:Vector2} {", "    fn ${3:Length}(self: view ${2:Vector2}) -> ${4:f32} {", "        ${5}", "    }", "}"],
+    "description": "Create member-style behavior for a component."
   },
-  "For In Array": {
+  "Typed Attribute": {
+    "prefix": "attribute",
+    "body": ["attribute ${1:label}(${2:value}: ${3:string}) for ${4:component} retain;"],
+    "description": "Declare a typed user attribute."
+  },
+  "Native Header": {
+    "prefix": "cpp-header",
+    "body": ["using cpp::header(\"${1:native_api.h}\");"],
+    "description": "Include a C++ header through modern attribute syntax."
+  },
+  "Native Function": {
+    "prefix": "native-fn",
+    "body": ["fn ${1:NativeCall}(${2}) -> ${3:i32}", "    with native, cpp::name(${4:native_api::NativeCall});"],
+    "description": "Declare a native-backed function."
+  },
+  "Result Match": {
+    "prefix": "match-result",
+    "body": ["match (${1:result}) {", "    Ok(${2:value}): { ${3} }", "    Err(${4:message}): { ${5} }", "}"],
+    "description": "Match a std::Result value."
+  },
+  "Option Match": {
+    "prefix": "match-option",
+    "body": ["match (${1:option}) {", "    Some(${2:value}): { ${3} }", "    None: { ${4} }", "}"],
+    "description": "Match a std::Option value."
+  },
+  "Async Task": {
+    "prefix": "async-task",
+    "body": ["let ${1:task}: coroutine<${2:string}> = std::async::RunBlocking<${2:string}>(() -> ${2:string} {", "    ${3}", "});", "let ${4:value}: ${2:string} = await ${1:task};"],
+    "description": "Start blocking work and await its coroutine."
+  },
+  "For In": {
     "prefix": "forin",
-    "body": [
-      "for ${1:item} in ${2:items} {",
-      "    ${3}",
-      "}"
-    ],
-    "description": "Create a Wio for-in loop."
-  },
-  "Match Expression": {
-    "prefix": "match",
-    "body": [
-      "match (${1:value}) {",
-      "    ${2:1}, ${3:2}: ${4:HandleFastPath()};",
-      "    assumed: ${5:HandleDefault()};",
-      "}"
-    ],
-    "description": "Create a Wio match block."
-  },
-  "Cpp Header Use": {
-    "prefix": "cppheader",
-    "body": [
-      "use @CppHeader(\"${1:foo.h}\");"
-    ],
-    "description": "Import a native C++ header into Wio."
+    "body": ["for ${1:item} in ${2:items} {", "    ${3}", "}"],
+    "description": "Iterate over a collection."
   }
 }
