@@ -1,89 +1,64 @@
 {
   "name": "wio-vscode",
-  "displayName": "Wio",
-  "description": "VS Code support for the Wio language.",
+  "displayName": "Wio Language Support",
+  "description": "First-class editing, diagnostics, project commands, and navigation for Wio 0.12.",
   "repository": "https://github.com/tynes0/wio-vscode",
-  "version": "0.0.2",
+  "version": "0.12.0",
   "publisher": "local",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "main": "./src/extension.js",
   "engines": {
     "vscode": "^1.90.0"
   },
-  "categories": [
-    "Programming Languages",
-    "Snippets"
-  ],
+  "extensionKind": ["workspace"],
+  "categories": ["Programming Languages", "Linters", "Snippets"],
   "activationEvents": [
     "onLanguage:wio",
-    "onCommand:wio.checkCurrentFile",
-    "onCommand:wio.runCurrentFile",
-    "onCommand:wio.emitCppCurrentFile",
-    "onCommand:wio.showBackendInfoCurrentFile",
-    "onCommand:wio.clearDiagnostics"
+    "workspaceContains:**/wio.makewio",
+    "workspaceContains:**/makewio",
+    "workspaceContains:**/wio.project.json"
   ],
+  "scripts": {
+    "check": "node ./scripts/check.js",
+    "test": "node --test ./test/*.test.js",
+    "test:integration": "node ./scripts/integration.js",
+    "package": "npm run check && npm test && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.6.0"
+  },
   "contributes": {
-    "languages": [
-      {
-        "id": "wio",
-        "aliases": [
-          "Wio",
-          "wio"
-        ],
-        "extensions": [
-          ".wio"
-        ],
-        "configuration": "./language-configuration.json",
-        "icon": {
-          "light": "./assets/wio-file-light.svg",
-          "dark": "./assets/wio-file-dark.svg"
-        }
+    "languages": [{
+      "id": "wio",
+      "aliases": ["Wio", "wio"],
+      "extensions": [".wio"],
+      "configuration": "./language-configuration.json",
+      "icon": {
+        "light": "./assets/wio-file-light.svg",
+        "dark": "./assets/wio-file-dark.svg"
       }
-    ],
-    "grammars": [
-      {
-        "language": "wio",
-        "scopeName": "source.wio",
-        "path": "./syntaxes/wio.tmLanguage.json"
-      }
-    ],
-    "snippets": [
-      {
-        "language": "wio",
-        "path": "./snippets/wio.json"
-      }
-    ],
+    }],
+    "grammars": [{
+      "language": "wio",
+      "scopeName": "source.wio",
+      "path": "./syntaxes/wio.tmLanguage.json"
+    }],
+    "snippets": [{
+      "language": "wio",
+      "path": "./snippets/wio.json"
+    }],
     "commands": [
-      {
-        "command": "wio.checkCurrentFile",
-        "title": "Check Current File",
-        "category": "Wio",
-        "icon": "$(check)"
-      },
-      {
-        "command": "wio.runCurrentFile",
-        "title": "Run Current File",
-        "category": "Wio",
-        "icon": "$(play)"
-      },
-      {
-        "command": "wio.emitCppCurrentFile",
-        "title": "Emit Generated C++",
-        "category": "Wio",
-        "icon": "$(file-code)"
-      },
-      {
-        "command": "wio.showBackendInfoCurrentFile",
-        "title": "Show Backend Info",
-        "category": "Wio",
-        "icon": "$(tools)"
-      },
-      {
-        "command": "wio.clearDiagnostics",
-        "title": "Clear Diagnostics",
-        "category": "Wio",
-        "icon": "$(clear-all)"
-      }
+      { "command": "wio.checkCurrentFile", "title": "Check Current File", "category": "Wio", "icon": "$(check)" },
+      { "command": "wio.runCurrentFile", "title": "Run Current File", "category": "Wio", "icon": "$(play)" },
+      { "command": "wio.emitCppCurrentFile", "title": "Emit Generated C++", "category": "Wio", "icon": "$(file-code)" },
+      { "command": "wio.showBackendInfoCurrentFile", "title": "Show Backend Information", "category": "Wio", "icon": "$(tools)" },
+      { "command": "wio.buildProject", "title": "Build Project", "category": "Wio", "icon": "$(gear)" },
+      { "command": "wio.runProject", "title": "Run Project", "category": "Wio", "icon": "$(debug-start)" },
+      { "command": "wio.testProject", "title": "Test Project", "category": "Wio", "icon": "$(beaker)" },
+      { "command": "wio.doctor", "title": "Run Environment Doctor", "category": "Wio", "icon": "$(heart-pulse)" },
+      { "command": "wio.restartIndex", "title": "Restart Workspace Index", "category": "Wio", "icon": "$(refresh)" },
+      { "command": "wio.showOutput", "title": "Show Output", "category": "Wio", "icon": "$(output)" },
+      { "command": "wio.clearDiagnostics", "title": "Clear Diagnostics", "category": "Wio", "icon": "$(clear-all)" }
     ],
     "configuration": {
       "title": "Wio",
@@ -91,114 +66,96 @@
         "wio.executable": {
           "type": "string",
           "default": "wio",
-          "description": "Path or command name for the Wio compiler executable."
+          "scope": "machine-overridable",
+          "description": "Wio executable path or command name."
         },
         "wio.defaultArgs": {
           "type": "array",
           "default": [],
-          "items": {
-            "type": "string"
-          },
-          "description": "Default extra arguments passed to every Wio compiler invocation."
+          "items": { "type": "string" },
+          "description": "Compatibility compiler arguments for manifest-free file invocations. Prefer standalone.compilerArgs for new configurations."
         },
         "wio.enableDiagnosticsOnSave": {
           "type": "boolean",
           "default": true,
-          "description": "Run `wio --dry-run` for the current Wio file after save."
+          "description": "Check a Wio file after it is saved."
         },
         "wio.enableDiagnosticsOnOpen": {
           "type": "boolean",
           "default": true,
-          "description": "Run `wio --dry-run` for the current Wio file when it is opened."
+          "description": "Check a Wio file when it is opened."
+        },
+        "wio.diagnosticsDebounceMs": {
+          "type": "number",
+          "default": 250,
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "Delay before automatic diagnostics are launched."
         },
         "wio.showOutputOnSuccess": {
           "type": "boolean",
           "default": false,
-          "description": "Reveal the Wio output channel even when a command succeeds."
+          "description": "Reveal the Wio output channel after successful commands."
         },
         "wio.runArgs": {
           "type": "array",
           "default": [],
-          "items": {
-            "type": "string"
-          },
-          "description": "Extra arguments appended after `--run` when running the current Wio file."
+          "items": { "type": "string" },
+          "description": "Program arguments passed after `--` for file and project runs."
+        },
+        "wio.standalone.target": {
+          "type": "string",
+          "enum": ["auto", "exe", "static", "shared"],
+          "default": "auto",
+          "description": "Target for files outside a manifest. Auto uses exe for Entry/application files and static otherwise."
+        },
+        "wio.standalone.compilerArgs": {
+          "type": "array",
+          "default": [],
+          "items": { "type": "string" },
+          "description": "Include directories, native sources, link options, and other compiler arguments for manifest-free files."
+        },
+        "wio.project.checkOnNativeSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Rebuild the owning Wio project when a C/C++ source or header is saved."
+        },
+        "wio.project.commandArgs": {
+          "type": "array",
+          "default": [],
+          "items": { "type": "string" },
+          "description": "Extra project-level arguments such as --config or --build-dir. Native build settings should remain in the manifest."
+        },
+        "wio.index.maxFiles": {
+          "type": "number",
+          "default": 4000,
+          "minimum": 1,
+          "maximum": 50000,
+          "description": "Maximum Wio files included in workspace navigation."
+        },
+        "wio.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Controls extension diagnostic logging."
         }
       }
     },
     "keybindings": [
-      {
-        "command": "wio.checkCurrentFile",
-        "key": "ctrl+alt+w",
-        "mac": "cmd+alt+w",
-        "when": "editorLangId == wio && editorTextFocus"
-      },
-      {
-        "command": "wio.runCurrentFile",
-        "key": "ctrl+alt+r",
-        "mac": "cmd+alt+r",
-        "when": "editorLangId == wio && editorTextFocus"
-      },
-      {
-        "command": "wio.emitCppCurrentFile",
-        "key": "ctrl+alt+e",
-        "mac": "cmd+alt+e",
-        "when": "editorLangId == wio && editorTextFocus"
-      },
-      {
-        "command": "wio.showBackendInfoCurrentFile",
-        "key": "ctrl+alt+b",
-        "mac": "cmd+alt+b",
-        "when": "editorLangId == wio && editorTextFocus"
-      }
+      { "command": "wio.checkCurrentFile", "key": "ctrl+alt+w", "mac": "cmd+alt+w", "when": "editorLangId == wio && editorTextFocus" },
+      { "command": "wio.runCurrentFile", "key": "ctrl+alt+r", "mac": "cmd+alt+r", "when": "editorLangId == wio && editorTextFocus" },
+      { "command": "wio.buildProject", "key": "ctrl+alt+b", "mac": "cmd+alt+b", "when": "editorLangId == wio" }
     ],
     "menus": {
-      "commandPalette": [
-        {
-          "command": "wio.checkCurrentFile",
-          "when": "editorLangId == wio"
-        },
-        {
-          "command": "wio.runCurrentFile",
-          "when": "editorLangId == wio"
-        },
-        {
-          "command": "wio.emitCppCurrentFile",
-          "when": "editorLangId == wio"
-        },
-        {
-          "command": "wio.showBackendInfoCurrentFile",
-          "when": "editorLangId == wio"
-        },
-        {
-          "command": "wio.clearDiagnostics",
-          "when": "editorLangId == wio"
-        }
-      ],
       "editor/title": [
-        {
-          "command": "wio.checkCurrentFile",
-          "when": "resourceExtname == .wio",
-          "group": "navigation@100"
-        },
-        {
-          "command": "wio.runCurrentFile",
-          "when": "resourceExtname == .wio",
-          "group": "navigation@101"
-        },
-        {
-          "command": "wio.emitCppCurrentFile",
-          "when": "resourceExtname == .wio",
-          "group": "navigation@102"
-        }
+        { "command": "wio.checkCurrentFile", "when": "resourceExtname == .wio", "group": "navigation@100" },
+        { "command": "wio.runCurrentFile", "when": "resourceExtname == .wio", "group": "navigation@101" }
+      ],
+      "explorer/context": [
+        { "command": "wio.checkCurrentFile", "when": "resourceExtname == .wio", "group": "wio@10" },
+        { "command": "wio.runCurrentFile", "when": "resourceExtname == .wio", "group": "wio@11" }
       ]
     }
   },
-  "keywords": [
-    "wio",
-    "language",
-    "compiler",
-    "interop",
-    "scripting"
-  ]
+  "keywords": ["wio", "language", "compiler", "async", "native", "interop"]
 }

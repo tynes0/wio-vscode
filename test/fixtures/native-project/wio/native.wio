@@ -1,0 +1,6 @@
+realm editor_native {
+    using cpp::header("native_math.h");
+
+    fn Multiply(left: i32, right: i32) -> i32
+        with native, cpp::name(editor_fixture::Multiply);
+}

@@ -1,0 +1,5 @@
+use math;
+
+fn Entry() -> i32 {
+    return fixture_math::Double(21) == 42 ? 0 : 1;
+}

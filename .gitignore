@@ -1,0 +1,8 @@
+node_modules/
+artifacts/
+test/fixtures/**/.wio-build/
+test/fixtures/**/*.wio.cpp
+test/fixtures/**/*.exe
+test/fixtures/**/*.a
+*.vsix
+!.vscodeignore

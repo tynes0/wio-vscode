@@ -1,80 +1,92 @@
-# Wio VS Code Extension
+# Wio Language Support
 
-This repository contains the first standalone VS Code extension scaffold for Wio.
+The official editing companion for Wio `0.11.x`. The extension follows the
+compiler's release line and understands the modern application, async,
+attribute, interop, and standard-library surfaces introduced by Wio 0.11.
 
-Current scope:
+## What You Get
 
-- `.wio` file association
-- light/dark file icons for `.wio`
-- bracket and comment configuration
-- first-pass syntax highlighting
-- starter snippets
-- command palette integration for Wio compiler actions
-- basic diagnostics by running `wio <file> --dry-run`
-- direct run support for entry-bearing files
+- syntax highlighting for `application`, `system`, lifecycle blocks,
+  `async`/`await`/`coroutine`, typed attributes, and modern native declarations
+- manifest-aware compiler diagnostics on open and save, mapped back to Wio or
+  native C/C++ source files
+- completion for language keywords, primitive and standard-library types,
+  attributes, and declarations in the current workspace
+- hover, go to definition, references, signature help, document outline, and
+  workspace symbols backed by an incremental Wio source index
+- commands for checking/running a file, emitting C++, inspecting the backend,
+  building/running/testing a project, and running `wio env doctor`
+- v0.11 snippets for applications, systems, async functions, typed attributes,
+  Result/Option matches, component extensions, and native bridges
 
-## Included Commands
+## Requirements
 
-- `Wio: Check Current File`
-- `Wio: Run Current File`
-- `Wio: Emit Generated C++`
-- `Wio: Show Backend Info`
-- `Wio: Clear Diagnostics`
+Install Wio `0.11.x` and make `wio` available on `PATH`, or set
+`wio.executable` to its full path.
 
-## Default Shortcuts
+## Commands
 
-- `Ctrl+Alt+W`: check current file
-- `Ctrl+Alt+R`: run current file
-- `Ctrl+Alt+E`: emit generated C++
-- `Ctrl+Alt+B`: show backend info
+Open the Command Palette and search for **Wio**:
 
-On macOS the same bindings use `Cmd+Alt+...`.
+| Command | Manifest project | Standalone file |
+| --- | --- | --- |
+| Check Current File | `wio project build --project <manifest>` | `wio file check <file>` |
+| Run Current File | `wio project run --project <manifest>` | `wio file run <file>` |
+| Emit Generated C++ | project rebuild/output | direct compiler `--emit-cpp` |
+| Show Backend Information | `wio project describe` | direct compiler `--show-backend-info --dry-run` |
+| Build/Run/Test Project | structured `wio project` command | not available |
+| Run Environment Doctor | `wio env doctor` | `wio env doctor` |
+| Restart Workspace Index | rebuilds editor navigation data | rebuilds editor navigation data |
 
-The editor title bar buttons also use codicon-based action icons now, so they should look much cleaner than plain text buttons.
+The nearest `wio.makewio`, `makewio`, or `wio.project.json` determines the
+project root. Files listed by its entry/source roots are always built through
+the complete manifest, so include paths, native sources, link libraries,
+output settings, host targets, and the real application entry remain intact.
+
+A `.wio` file outside explicit manifest source roots is standalone. Standalone
+files containing `Entry` or `application` are executable; other files are
+checked as static libraries and do not receive a false missing-Entry error.
+Trying to run such a library shows an explanation instead of invoking a broken
+compile. Native standalone files can supply their own compiler flags through
+`wio.standalone.compilerArgs`.
 
 ## Settings
 
-- `wio.executable`
-  Use this when `wio` is not already on `PATH`.
-- `wio.defaultArgs`
-  Extra compiler args to append to every command.
-- `wio.enableDiagnosticsOnSave`
-  Re-check the current `.wio` file after save.
-- `wio.enableDiagnosticsOnOpen`
-  Re-check the current `.wio` file when opened.
-- `wio.showOutputOnSuccess`
-  Reveal the Wio output channel even when a command succeeds.
-- `wio.runArgs`
-  Extra arguments appended after `--run`.
+- `wio.executable`: executable path or command (`wio` by default)
+- `wio.defaultArgs`: compatibility compiler arguments for standalone files
+- `wio.runArgs`: application arguments forwarded after `--`
+- `wio.standalone.target`: `auto`, `exe`, `static`, or `shared`
+- `wio.standalone.compilerArgs`: includes/native/link flags without a manifest
+- `wio.project.commandArgs`: project-only configuration/build-directory flags
+- `wio.project.checkOnNativeSave`: rebuild after C/C++ source/header saves
+- `wio.enableDiagnosticsOnOpen` / `wio.enableDiagnosticsOnSave`
+- `wio.diagnosticsDebounceMs`: automatic-check delay
+- `wio.index.maxFiles`: workspace index safety limit
+- `wio.showOutputOnSuccess`: reveal successful compiler output
+- `wio.trace.server`: extension-side diagnostic verbosity
 
-## Local Development
+## Development
 
-No build step is required right now.
+```powershell
+npm install
+npm run check
+npm test
+npm run package
+```
 
-1. Open this folder in VS Code.
-2. Press `F5`.
-3. In the Extension Development Host, open a `.wio` file.
-4. Use the title-bar buttons, Command Palette, or the default shortcuts above.
+The checked-in pure-Wio, native C++/Wio, and standalone fixtures can also be
+run against a real compiler:
 
-A ready-to-use launch config already exists in:
+```powershell
+$env:WIO_TEST_EXECUTABLE = "C:\\Wio\\bin\\wio.exe"
+$env:WIO_TEST_FORCE_REBUILD = "1" # optional packaged-toolchain qualification
+npm run test:integration
+```
 
-- `.vscode/launch.json`
+Press `F5` in VS Code to open an Extension Development Host.
 
-## Current Limits
+See [RELEASE_POLICY.md](./RELEASE_POLICY.md) for compiler/extension versioning.
 
-This is intentionally a first useful slice, not the full editor story yet.
+## License
 
-Still missing:
-
-- hover, completion, go-to-definition
-- LSP-backed semantic understanding
-- formatter integration
-- test explorer integration
-- richer diagnostic parsing for non-file backend diagnostics
-
-## Suggested Next Steps
-
-- add richer grammar scopes and themes
-- improve diagnostics parsing and stale cleanup behavior
-- add a tiny `wio check` / `wio emit-cpp` task provider
-- move toward a proper Wio language server when compiler JSON diagnostics are ready
+MIT

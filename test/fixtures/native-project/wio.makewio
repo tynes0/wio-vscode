@@ -1,0 +1,26 @@
+schemaVersion = 1
+name = "EditorNativeFixture"
+template = "wio-native-app"
+
+[wio]
+entry = "wio/main.wio"
+target = "exe"
+sourceRoots = ["wio"]
+includeDirs = ["native/include"]
+linkDirs = []
+linkLibraries = []
+nativeSources = ["native/src/native_math.cpp"]
+backendArgs = []
+
+[build]
+buildDir = ".wio-build"
+config = "Release"
+
+[outputs]
+directory = ".wio-build/interop"
+baseName = "editor_native_fixture"
+wioName = "editor_native_fixture"
+
+[run]
+args = []
+workingDirectory = "."
