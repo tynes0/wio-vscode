@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0
+
+- Added Wio 0.12 structured-concurrency highlighting, completion, hover, and
+  an `async scope`/`spawn` snippet.
+- Advanced extension/package metadata alongside the Wio 0.12 toolchain.
+
 ## 0.11.1
 
 - Routed files owned by a makewio/JSON manifest through full project

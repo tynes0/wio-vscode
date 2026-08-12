@@ -74,6 +74,11 @@
     "body": ["let ${1:task}: coroutine<${2:string}> = std::async::RunBlocking<${2:string}>(() -> ${2:string} {", "    ${3}", "});", "let ${4:value}: ${2:string} = await ${1:task};"],
     "description": "Start blocking work and await its coroutine."
   },
+  "Structured Async Scope": {
+    "prefix": "async-scope",
+    "body": ["async scope {", "    let ${1:task} = spawn ${2:operation}();", "    let ${3:value} = await ${1:task};", "    ${4}", "}"],
+    "description": "Run child work in an owning lexical async scope."
+  },
   "For In": {
     "prefix": "forin",
     "body": ["for ${1:item} in ${2:items} {", "    ${3}", "}"],

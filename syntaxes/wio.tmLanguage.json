@@ -117,7 +117,7 @@
     "keywords": {
       "patterns": [
         { "name": "keyword.control.flow.wio", "match": "\\b(?:if|else|while|loop|for|foreach|in|match|when|return|break|continue|yield)\\b" },
-        { "name": "keyword.control.async.wio", "match": "\\b(?:async|await|coroutine|thread|every|after|during|wait)\\b" },
+        { "name": "keyword.control.async.wio", "match": "\\b(?:async|await|coroutine|spawn|thread|every|after|during|wait)\\b" },
         { "name": "keyword.operator.word.wio", "match": "\\b(?:and|or|not|is|fit)\\b" },
         { "name": "storage.modifier.wio", "match": "\\b(?:let|mut|const|ref|view|public|private|protected|native|retain|repeatable|scoped|conflicts|final|readonly)\\b" },
         { "name": "variable.language.wio", "match": "\\b(?:self|super)\\b" },

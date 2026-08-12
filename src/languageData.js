@@ -7,7 +7,7 @@ const KEYWORDS = [
   "flagset", "fn", "for", "foreach", "if", "in", "interface", "is", "let",
   "loop", "match", "mut", "native", "none", "not", "object", "on", "opaque",
   "or", "private", "protected", "public", "realm", "ref", "repeatable",
-  "retain", "return", "scoped", "self", "system", "thread", "true", "type",
+  "retain", "return", "scoped", "self", "spawn", "system", "thread", "true", "type",
   "using", "view", "when", "where", "while", "with", "yield"
 ];
 
@@ -50,6 +50,7 @@ const DOCS = {
   async: "Marks a function or method as asynchronous.",
   await: "Suspends the current async flow until the awaited operation completes.",
   coroutine: "Defines or names a resumable computation.",
+  spawn: "Starts a child task owned by the nearest lexical async scope.",
   attribute: "Declares a typed user attribute usable through `with` or `using`.",
   extension: "Adds externally implemented member-style behavior to a component or type.",
   with: "Attaches modern postfix attributes to a declaration.",
