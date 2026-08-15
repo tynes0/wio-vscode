@@ -1,9 +1,9 @@
 {
   "name": "wio-vscode",
   "displayName": "Wio Language Support",
-  "description": "First-class editing, diagnostics, project commands, and navigation for Wio 0.12.",
+  "description": "First-class editing, diagnostics, project commands, and navigation for Wio 0.13.",
   "repository": "https://github.com/tynes0/wio-vscode",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "publisher": "local",
   "license": "MIT",
   "main": "./src/extension.js",

@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "product": "wio-vscode",
+  "version": "0.13.0",
+  "compatibleWio": "0.13.x",
+  "channel": "release-candidate"
+}

@@ -13,7 +13,7 @@ const KEYWORDS = [
 
 const TYPES = [
   "bool", "byte", "char", "f32", "f64", "i8", "i16", "i32", "i64",
-  "isize", "object", "string", "u8", "u16", "u32", "u64", "uchar", "usize", "void"
+  "isize", "object", "string", "text", "u8", "u16", "u32", "u64", "uchar", "usize", "void"
 ];
 
 const BUILTINS = {
@@ -37,11 +37,16 @@ const ATTRIBUTES = {
   "cpp::name": "Maps a Wio declaration to its native C++ name.",
   "cpp::opaque": "Marks a native value as opaque to Wio.",
   "native": "Declares a native-backed type or callable.",
+  "export::c": "Exports a narrow C ABI entry point for native hosts.",
   "default": "Applies default visibility or declaration policy.",
   "generate_ctors": "Requests generated component constructors.",
-  "retain": "Keeps an attribute available for reflection.",
-  "repeatable": "Allows an attribute to occur multiple times.",
-  "scoped": "Restricts an attribute to its declared target kinds."
+  "attribute::source": "Retains typed metadata in source tooling.",
+  "attribute::compile": "Retains typed metadata through compilation.",
+  "attribute::runtime": "Exposes typed metadata through runtime reflection.",
+  "attribute::repeatable": "Allows a typed attribute to occur multiple times.",
+  "attribute::inherited": "Allows typed metadata to be inherited.",
+  "attribute::scoped": "Allows scoped activation through using.",
+  "attribute::conflict": "Places an attribute in an explicit conflict group."
 };
 
 const DOCS = {

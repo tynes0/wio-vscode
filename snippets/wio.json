@@ -46,8 +46,33 @@
   },
   "Typed Attribute": {
     "prefix": "attribute",
-    "body": ["attribute ${1:label}(${2:value}: ${3:string}) for ${4:component} retain;"],
+    "body": ["attribute ${1:route}(${2:fn})(${3:path}: ${4:string} = \"${5:/}\")", "    with attribute::runtime;"],
     "description": "Declare a typed user attribute."
+  },
+  "Unicode Text": {
+    "prefix": "text",
+    "body": ["let ${1:message}: text = u\"${2:Merhaba 🌍}\";"],
+    "description": "Create a validated Unicode-semantic text value."
+  },
+  "Interpolated Unicode Text": {
+    "prefix": "text-interpolation",
+    "body": ["let ${1:message}: text = u$\"${2:Value}: \\${${3:value}}\";"],
+    "description": "Create interpolated Unicode text with a nested Wio expression."
+  },
+  "Textual Const Generic": {
+    "prefix": "const-generic-text",
+    "body": ["component ${1:Named}<const ${2:Name}: ${3:string} = \"${4:unnamed}\"> {", "    ${5:value}: ${6:i32};", "}"],
+    "description": "Create a component with a string or text const generic parameter."
+  },
+  "Fixed Array Inferred Extent": {
+    "prefix": "fixed-array-auto",
+    "body": ["let ${1:values}: [${2:i32}; _] = [${3:1, 2, 3}];"],
+    "description": "Infer a fixed-array extent from its initializer."
+  },
+  "Guarded Match Arm": {
+    "prefix": "match-guard",
+    "body": ["match (${1:value}) {", "    ${2:caseValue} if ${3:condition}: { ${4} }", "    assumed: { ${5} }", "}"],
+    "description": "Create a match with a boolean arm guard."
   },
   "Native Header": {
     "prefix": "cpp-header",

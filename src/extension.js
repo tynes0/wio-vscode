@@ -10,6 +10,7 @@ const { WorkspaceIndex } = require("./workspaceIndex");
 let activeServices;
 
 async function activate(context) {
+  const extensionVersion = context.extension?.packageJSON?.version || "0.13.0";
   const output = vscode.window.createOutputChannel("Wio", { log: true });
   const diagnostics = vscode.languages.createDiagnosticCollection("wio");
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 20);
@@ -60,9 +61,9 @@ async function activate(context) {
   );
 
   await index.rebuild();
-  status.text = "$(check) Wio 0.11";
+  status.text = `$(check) Wio ${extensionVersion}`;
   for (const document of vscode.workspace.textDocuments) scheduleDiagnostics(document, "open");
-  output.appendLine("Wio Language Support 0.11.0 activated.");
+  output.appendLine(`Wio Language Support ${extensionVersion} activated.`);
 }
 
 function deactivate() {
