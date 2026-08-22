@@ -12,5 +12,5 @@ The VS Code extension follows the Wio compiler version beginning with `0.11.0`.
   but compatibility remains within the same major/minor line.
 - The extension test suite and VSIX package check are release gates for Wio.
 
-For example, Wio `0.12.0` and its language surface must ship alongside
-`wio-vscode 0.12.0`.
+For example, Wio `0.13.0` and its language surface must ship alongside
+`wio-vscode 0.13.0`.

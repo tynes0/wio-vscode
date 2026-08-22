@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0
+
+- Added Wio 0.13 Unicode `text` and `u"..."`/`u$"..."` grammar support.
+- Added completion and snippets for compact/named typed attributes, textual
+  const generics, fixed-array extent inference, and guarded match arms.
+- Made the extension status/output version derive from package metadata and
+  aligned all extension metadata with Wio 0.13.0.
+
 ## 0.12.0
 
 - Added Wio 0.12 structured-concurrency highlighting, completion, hover, and

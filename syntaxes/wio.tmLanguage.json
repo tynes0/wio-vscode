@@ -27,12 +27,23 @@
     },
     "strings": {
       "patterns": [
+        { "name": "string.quoted.double.unicode.wio", "begin": "u\"", "end": "\"", "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.wio" } }, "endCaptures": { "0": { "name": "punctuation.definition.string.end.wio" } }, "patterns": [{ "name": "constant.character.escape.wio", "match": "\\\\(?:[\\\\\"'0abfnrtv]|x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})" }] },
         { "name": "string.quoted.double.wio", "begin": "\"", "end": "\"", "patterns": [{ "name": "constant.character.escape.wio", "match": "\\\\(?:[\\\\\"'0abfnrtv]|x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})" }] },
         { "name": "string.quoted.single.wio", "begin": "'", "end": "'", "patterns": [{ "name": "constant.character.escape.wio", "match": "\\\\." }] }
       ]
     },
     "interpolatedStrings": {
       "patterns": [{
+        "name": "string.quoted.double.unicode.interpolated.wio",
+        "begin": "u\\$\"",
+        "end": "\"",
+        "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.wio" } },
+        "endCaptures": { "0": { "name": "punctuation.definition.string.end.wio" } },
+        "patterns": [
+          { "name": "constant.character.escape.wio", "match": "\\\\." },
+          { "include": "#interpolation" }
+        ]
+      }, {
         "name": "string.quoted.double.interpolated.wio",
         "begin": "\\$\"",
         "end": "\"",
@@ -125,7 +136,7 @@
       ]
     },
     "types": {
-      "patterns": [{ "name": "support.type.primitive.wio", "match": "\\b(?:i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|isize|usize|byte|bool|char|uchar|string|void|object|opaque)\\b" }]
+      "patterns": [{ "name": "support.type.primitive.wio", "match": "\\b(?:i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|isize|usize|byte|bool|char|uchar|string|text|void|object|opaque)\\b" }]
     },
     "calls": {
       "patterns": [{ "name": "entity.name.function.call.wio", "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*(?:<[^;{}()]*>)?\\s*\\()" }]
