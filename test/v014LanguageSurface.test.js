@@ -6,7 +6,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const root = path.resolve(__dirname, "..");
-const { TYPES, ATTRIBUTES } = require("../src/languageData");
+const { TYPES, BUILTINS, ATTRIBUTES } = require("../src/languageData");
 
 function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
@@ -29,23 +29,26 @@ function findNamedPattern(value, name) {
   return undefined;
 }
 
-test("aligns package and release metadata with Wio 0.13", () => {
+test("aligns package and release metadata with Wio 0.14", () => {
   const packageJson = readJson("package.json");
   const lock = readJson("package-lock.json");
   const release = readJson("release-manifest.json");
 
-  assert.equal(packageJson.version, "0.13.0");
+  assert.equal(packageJson.version, "0.14.0");
   assert.equal(lock.version, packageJson.version);
   assert.equal(lock.packages[""].version, packageJson.version);
   assert.equal(release.version, packageJson.version);
-  assert.equal(release.compatibleWio, "0.13.x");
+  assert.equal(release.compatibleWio, "0.14.x");
 });
 
-test("exposes the Wio 0.13 language surface", () => {
+test("exposes the Wio 0.14 language and std surface", () => {
   assert.ok(TYPES.includes("text"));
   assert.ok(Object.hasOwn(ATTRIBUTES, "attribute::runtime"));
   assert.ok(Object.hasOwn(ATTRIBUTES, "attribute::conflict"));
   assert.ok(Object.hasOwn(ATTRIBUTES, "export::c"));
+  assert.ok(Object.hasOwn(BUILTINS, "std::serialization::Codec<TValue, TWire>"));
+  assert.ok(Object.hasOwn(BUILTINS, "std::unicode::NormalizationForm"));
+  assert.ok(Object.hasOwn(BUILTINS, "std::regex::Match"));
 
   const snippets = readJson("snippets/wio.json");
   assert.match(snippets["Typed Attribute"].body.join("\n"), /attribute::runtime/);

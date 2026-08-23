@@ -26,7 +26,10 @@ const BUILTINS = {
   "std::Set<T>": "Ordered unique-value collection.",
   "std::UnorderedSet<T>": "Hash-backed unique-value collection.",
   "std::Tuple": "Fixed-size heterogeneous values.",
-  "std::json::Value": "JSON value with parse, inspection, and writing support.",
+  "std::json::Value": "JSON value with exact numeric tokens, checked integer accessors, parse, inspection, and writing support.",
+  "std::serialization::Codec<TValue, TWire>": "Typed checked encoder/decoder pair for composing serialization boundaries.",
+  "std::unicode::NormalizationForm": "Unicode 17 NFC, NFD, NFKC, or NFKD normalization form.",
+  "std::regex::Match": "Bounded regex match record with byte offsets and captures.",
   "std::async::Task<T>": "Asynchronous result that can be polled or awaited.",
   "std::async::CancellationSource": "Cooperative cancellation source and token owner.",
   "std::time::Instant": "Monotonic time point for duration measurement."
