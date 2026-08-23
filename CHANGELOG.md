@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.0
+
+- Aligned extension/package metadata with the Wio 0.14 release line.
+- Added completion/hover descriptions for exact JSON numbers, typed
+  serialization codecs, Unicode normalization forms, and bounded regex match
+  records.
+- Kept the 0.13 language grammar intact while advancing the standard-library
+  and SDK value-parity vocabulary.
+
 ## 0.13.0
 
 - Added Wio 0.13 Unicode `text` and `u"..."`/`u$"..."` grammar support.

@@ -1,6 +1,6 @@
 # Wio Language Support
 
-The official editing companion for Wio `0.13.x`. The extension follows the
+The official editing companion for Wio `0.14.x`. The extension follows the
 compiler's release line and understands the modern application, async,
 attribute, Unicode `text`, generic, interop, and standard-library surfaces.
 
@@ -16,13 +16,13 @@ attribute, Unicode `text`, generic, interop, and standard-library surfaces.
   workspace symbols backed by an incremental Wio source index
 - commands for checking/running a file, emitting C++, inspecting the backend,
   building/running/testing a project, and running `wio env doctor`
-- v0.13 snippets for applications, systems, async functions, compact typed
+- current snippets for applications, systems, async functions, compact typed
   attributes, Unicode text, textual const generics, guarded matches, inferred
   fixed arrays, component extensions, and native bridges
 
 ## Requirements
 
-Install Wio `0.13.x` and make `wio` available on `PATH`, or set
+Install Wio `0.14.x` and make `wio` available on `PATH`, or set
 `wio.executable` to its full path.
 
 ## Commands
