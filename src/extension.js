@@ -10,7 +10,7 @@ const { WorkspaceIndex } = require("./workspaceIndex");
 let activeServices;
 
 async function activate(context) {
-  const extensionVersion = context.extension?.packageJSON?.version || "0.14.0";
+  const extensionVersion = context.extension?.packageJSON?.version || "0.15.0";
   const output = vscode.window.createOutputChannel("Wio", { log: true });
   const diagnostics = vscode.languages.createDiagnosticCollection("wio");
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 20);
