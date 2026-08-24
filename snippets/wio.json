@@ -46,7 +46,7 @@
   },
   "Typed Attribute": {
     "prefix": "attribute",
-    "body": ["attribute ${1:route}(${2:fn})(${3:path}: ${4:string} = \"${5:/}\")", "    with attribute::runtime;"],
+    "body": ["attribute ${1:Route}(${2:path}: ${3:string} = \"${4:/}\") for ${5:fn} retain ${6:runtime};"],
     "description": "Declare a typed user attribute."
   },
   "Unicode Text": {
@@ -81,7 +81,7 @@
   },
   "Native Function": {
     "prefix": "native-fn",
-    "body": ["fn ${1:NativeCall}(${2}) -> ${3:i32}", "    with native, cpp::name(${4:native_api::NativeCall});"],
+    "body": ["[Native, CppName(${4:native_api::NativeCall})]", "fn ${1:NativeCall}(${2}) -> ${3:i32};"],
     "description": "Declare a native-backed function."
   },
   "Result Match": {

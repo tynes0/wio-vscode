@@ -36,20 +36,21 @@ const BUILTINS = {
 };
 
 const ATTRIBUTES = {
-  "cpp::header": "Includes a C++ header for a declaration or compilation unit.",
-  "cpp::name": "Maps a Wio declaration to its native C++ name.",
+  "CppHeader": "Includes a C++ header for a declaration.",
+  "CppName": "Maps a Wio declaration to its native C++ name.",
   "cpp::opaque": "Marks a native value as opaque to Wio.",
-  "native": "Declares a native-backed type or callable.",
-  "export::c": "Exports a narrow C ABI entry point for native hosts.",
+  "Native": "Declares a native-backed type or callable.",
+  "Export": "Exports a narrow C ABI entry point for native hosts.",
   "default": "Applies default visibility or declaration policy.",
   "generate_ctors": "Requests generated component constructors.",
-  "attribute::source": "Retains typed metadata in source tooling.",
-  "attribute::compile": "Retains typed metadata through compilation.",
-  "attribute::runtime": "Exposes typed metadata through runtime reflection.",
-  "attribute::repeatable": "Allows a typed attribute to occur multiple times.",
-  "attribute::inherited": "Allows typed metadata to be inherited.",
-  "attribute::scoped": "Allows scoped activation through using.",
-  "attribute::conflict": "Places an attribute in an explicit conflict group."
+  "attribute::Targets": "Narrows the valid declaration targets.",
+  "attribute::Processor": "Attaches one checked processor phase.",
+  "attribute::Requires": "Requires effective companion attributes.",
+  "attribute::RequiresAny": "Requires at least one companion attribute.",
+  "attribute::Conflicts": "Rejects incompatible effective attributes.",
+  "attribute::OnlyWith": "Restricts the effective companion set.",
+  "attribute::Before": "Orders a processor before named attributes.",
+  "attribute::After": "Orders a processor after named attributes."
 };
 
 const DOCS = {
@@ -59,9 +60,9 @@ const DOCS = {
   await: "Suspends the current async flow until the awaited operation completes.",
   coroutine: "Defines or names a resumable computation.",
   spawn: "Starts a child task owned by the nearest lexical async scope.",
-  attribute: "Declares a typed user attribute usable through `with` or `using`.",
+  attribute: "Declares a typed user attribute applied with `[Attribute]` or activated with `using`.",
   extension: "Adds externally implemented member-style behavior to a component or type.",
-  with: "Attaches modern postfix attributes to a declaration.",
+  with: "Legacy postfix attribute migration input; prefer `[Attribute]`.",
   using: "Applies a compilation-unit or import-oriented attribute.",
   match: "Pattern-matches enums, Option, Result, and other supported values.",
   ref: "A mutable borrowed reference.",

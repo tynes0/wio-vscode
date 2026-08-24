@@ -84,8 +84,9 @@
     },
     "modernAttributes": {
       "patterns": [{
-        "name": "meta.attribute.postfix.wio", "begin": "\\b(with)(?=\\s)", "end": "(?=\\{|;|$)",
-        "beginCaptures": { "1": { "name": "keyword.other.attribute.wio" } },
+        "name": "meta.attribute.bracket.wio", "begin": "(?m)^\\s*(\\[)(?=[A-Za-z_])", "end": "(\\])",
+        "beginCaptures": { "1": { "name": "punctuation.definition.annotation.begin.wio" } },
+        "endCaptures": { "1": { "name": "punctuation.definition.annotation.end.wio" } },
         "patterns": [
           { "name": "entity.name.function.attribute.wio", "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()" },
           { "name": "entity.name.namespace.wio", "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=::)" },
