@@ -29,19 +29,19 @@ function findNamedPattern(value, name) {
   return undefined;
 }
 
-test("aligns package and release metadata with Wio 0.15", () => {
+test("aligns package and release metadata with Wio 0.16", () => {
   const packageJson = readJson("package.json");
   const lock = readJson("package-lock.json");
   const release = readJson("release-manifest.json");
 
-  assert.equal(packageJson.version, "0.15.0");
+  assert.equal(packageJson.version, "0.16.0");
   assert.equal(lock.version, packageJson.version);
   assert.equal(lock.packages[""].version, packageJson.version);
   assert.equal(release.version, packageJson.version);
-  assert.equal(release.compatibleWio, "0.15.x");
+  assert.equal(release.compatibleWio, "0.16.x");
 });
 
-test("exposes the Wio 0.15 language and std surface", () => {
+test("exposes the Wio 0.16 language and std surface", () => {
   assert.ok(TYPES.includes("text"));
   assert.ok(Object.hasOwn(ATTRIBUTES, "attribute::Processor"));
   assert.ok(Object.hasOwn(ATTRIBUTES, "attribute::Conflicts"));
@@ -49,12 +49,15 @@ test("exposes the Wio 0.15 language and std surface", () => {
   assert.ok(Object.hasOwn(BUILTINS, "std::serialization::Codec<TValue, TWire>"));
   assert.ok(Object.hasOwn(BUILTINS, "std::unicode::NormalizationForm"));
   assert.ok(Object.hasOwn(BUILTINS, "std::regex::Match"));
+  assert.ok(Object.hasOwn(BUILTINS, "std::async::CancellationToken"));
 
   const snippets = readJson("snippets/wio.json");
   assert.match(snippets["Typed Attribute"].body.join("\n"), /retain/);
   assert.ok(snippets["Textual Const Generic"].body.join("\n").includes("const ${2:Name}: ${3:string}"));
   assert.match(snippets["Fixed Array Inferred Extent"].body.join("\n"), /; _\]/);
   assert.match(snippets["Guarded Match Arm"].body.join("\n"), / if /);
+  assert.match(snippets["Scheduled Application Resource"].body.join("\n"), /run simulation\.update\(ref self\.world\)/);
+  assert.match(snippets["Cancellation-aware File Read"].body.join("\n"), /ReadTextAsync\(path, token\)/);
 });
 
 test("highlights byte and Unicode interpolated strings independently", () => {
