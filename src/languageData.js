@@ -1,13 +1,13 @@
 "use strict";
 
 const KEYWORDS = [
-  "and", "application", "as", "assumed", "async", "attribute", "await",
-  "break", "component", "conflicts", "const", "continue", "coroutine",
-  "during", "else", "enum", "every", "extension", "false", "fit", "flag",
+  "after", "and", "application", "as", "assumed", "async", "attribute", "await",
+  "before", "break", "component", "conflicts", "const", "continue", "coroutine",
+  "during", "else", "enum", "every", "extension", "false", "fit", "fixed", "flag",
   "flagset", "fn", "for", "foreach", "if", "in", "interface", "is", "let",
   "loop", "match", "mut", "native", "none", "not", "object", "on", "opaque",
-  "or", "private", "protected", "public", "realm", "ref", "repeatable",
-  "retain", "return", "scoped", "self", "spawn", "system", "thread", "true", "type",
+  "or", "private", "protected", "public", "realm", "ref", "repeatable", "resource",
+  "retain", "return", "run", "schedule", "scoped", "self", "spawn", "stage", "system", "thread", "true", "type",
   "using", "view", "when", "where", "while", "with", "yield"
 ];
 
@@ -32,6 +32,7 @@ const BUILTINS = {
   "std::regex::Match": "Bounded regex match record with byte offsets and captures.",
   "std::async::Task<T>": "Asynchronous result that can be polled or awaited.",
   "std::async::CancellationSource": "Cooperative cancellation source and token owner.",
+  "std::async::CancellationToken": "Copyable cooperative cancellation signal accepted by async I/O.",
   "std::time::Instant": "Monotonic time point for duration measurement."
 };
 
@@ -54,8 +55,10 @@ const ATTRIBUTES = {
 };
 
 const DOCS = {
-  application: "Defines the process lifecycle. Use `on start`, `on update`, and `on close` blocks.",
+  application: "Defines the process lifecycle, owned resources, systems, and deterministic schedule.",
   system: "Defines stack-resident application behavior with ordered lifecycle participation.",
+  resource: "Declares application-owned state that scheduled systems receive explicitly as `ref` or `view`.",
+  schedule: "Defines deterministic staged system update order, executor affinity, and fixed-rate work.",
   async: "Marks a function or method as asynchronous.",
   await: "Suspends the current async flow until the awaited operation completes.",
   coroutine: "Defines or names a resumable computation.",

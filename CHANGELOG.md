@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.16.0
+
+- Aligned extension and compatibility metadata with Wio 0.16.
+- Added resource/schedule/fixed-stage language vocabulary and hover guidance.
+- Added current snippets for monotonic update deltas, deterministic scheduled
+  resource injection, and cancellation-aware async file I/O.
+
+## 0.15.0
+
+- Adopted canonical bracket attributes while retaining legacy migration
+  highlighting.
+- Added typed attribute constraints, Unicode, const-generic, inferred-array,
+  and guarded-match editor surfaces.
+
 ## 0.14.0
 
 - Aligned extension/package metadata with the Wio 0.14 release line.

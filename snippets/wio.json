@@ -11,8 +11,13 @@
   },
   "Application": {
     "prefix": "application",
-    "body": ["application ${1:DesktopApp} {", "    on start {", "        ${2}", "    }", "", "    on update {", "        ${3}", "    }", "", "    on close {", "        ${4}", "    }", "}"],
+    "body": ["application ${1:DesktopApp} {", "    on start {", "        ${2}", "    }", "", "    on update(delta: f64) {", "        ${3}", "    }", "", "    on close {", "        ${4}", "    }", "}"],
     "description": "Create a Wio application lifecycle."
+  },
+  "Scheduled Application Resource": {
+    "prefix": "application-resource",
+    "body": ["component ${1:World} {", "    ${2:value}: ${3:i32} = 0;", "}", "", "system ${4:Simulation} {", "    on update(delta: f64, world: ref ${1:World}) {", "        ${5:world.${2:value} += 1;}", "    }", "}", "", "application ${6:DesktopApp} {", "    resource world: ${1:World};", "    system simulation: ${4:Simulation};", "", "    schedule {", "        stage systems on main {", "            run simulation.update(ref self.world);", "        }", "        stage finish after systems on main {", "            run self.update;", "        }", "    }", "", "    on update(delta: f64) {", "        ${7}", "    }", "}"],
+    "description": "Create a deterministic application schedule with explicit resource injection."
   },
   "Application System": {
     "prefix": "system",
@@ -103,6 +108,11 @@
     "prefix": "async-scope",
     "body": ["async scope {", "    let ${1:task} = spawn ${2:operation}();", "    let ${3:value} = await ${1:task};", "    ${4}", "}"],
     "description": "Run child work in an owning lexical async scope."
+  },
+  "Cancellation-aware File Read": {
+    "prefix": "async-cancellable-read",
+    "body": ["async fn ${1:Read}(path: string, token: std::async::CancellationToken) -> std::Result<string> {", "    return await std::fs::ReadTextAsync(path, token);", "}"],
+    "description": "Read a file asynchronously with explicit cooperative cancellation."
   },
   "For In": {
     "prefix": "forin",
