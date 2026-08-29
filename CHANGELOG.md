@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.0
+
+- Aligned extension and compatibility metadata with Wio 0.17.
+- Replaced legacy application/system snippets with ordinary lifecycle
+  functions and attribute-driven scheduling.
+- Added completion documentation for `Start`, `Update`, `Close`, `Fixed`,
+  `After`, `Main`, and the reserved `Worker` scheduling contract.
+
 ## 0.16.0
 
 - Aligned extension and compatibility metadata with Wio 0.16.
