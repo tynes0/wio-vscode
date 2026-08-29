@@ -11,18 +11,28 @@
   },
   "Application": {
     "prefix": "application",
-    "body": ["application ${1:DesktopApp} {", "    on start {", "        ${2}", "    }", "", "    on update(delta: f64) {", "        ${3}", "    }", "", "    on close {", "        ${4}", "    }", "}"],
-    "description": "Create a Wio application lifecycle."
+    "body": ["application ${1:DesktopApp} {", "    fn Start() {", "        ${2}", "    }", "", "    fn Update(delta: f64) {", "        ${3}", "    }", "", "    fn Close() {", "        ${4}", "    }", "}"],
+    "description": "Create a Wio 0.17 application with ordinary lifecycle functions."
   },
-  "Scheduled Application Resource": {
-    "prefix": "application-resource",
-    "body": ["component ${1:World} {", "    ${2:value}: ${3:i32} = 0;", "}", "", "system ${4:Simulation} {", "    on update(delta: f64, world: ref ${1:World}) {", "        ${5:world.${2:value} += 1;}", "    }", "}", "", "application ${6:DesktopApp} {", "    resource world: ${1:World};", "    system simulation: ${4:Simulation};", "", "    schedule {", "        stage systems on main {", "            run simulation.update(ref self.world);", "        }", "        stage finish after systems on main {", "            run self.update;", "        }", "    }", "", "    on update(delta: f64) {", "        ${7}", "    }", "}"],
-    "description": "Create a deterministic application schedule with explicit resource injection."
+  "Attributed Application Schedule": {
+    "prefix": "application-schedule",
+    "body": ["system ${1:Simulation} {", "    ticks: u64;", "", "    fn Update(delta: f64) {", "        ${2:self.ticks += 1u64;}", "    }", "}", "", "application ${3:DesktopApp} {", "    simulation: ${1:Simulation};", "", "    [Fixed(${4:60})]", "    fn ${5:Physics}(step: f64) {", "        ${6}", "    }", "", "    [After(${5:Physics})]", "    [Main]", "    fn ${7:Render}(delta: f64) {", "        ${8}", "    }", "", "    [Update]", "    fn ${9:Frame}(delta: f64) {", "        ${10}", "    }", "}"],
+    "description": "Create an attribute-driven deterministic application schedule."
+  },
+  "Composed Application Policy": {
+    "prefix": "application-policy",
+    "body": ["attribute ${1:FrameStep}(rate: f64) for handler", "    compose [Update, Fixed(rate), Main];", "", "[${1:FrameStep}(${2:60.0})]", "fn ${3:Advance}(step: f64) {", "    ${4}", "}"],
+    "description": "Compose reusable Wio 0.17 lifecycle and scheduling policy for an application handler."
   },
   "Application System": {
     "prefix": "system",
-    "body": ["system ${1:WorkspaceSystem} {", "    mut ${2:ready}: bool;", "", "    on start {", "        self.${2:ready} = false;", "        ${3}", "    }", "", "    on update {", "        ${4}", "    }", "", "    on close {", "        ${5}", "    }", "}"],
-    "description": "Create a stack-resident application system."
+    "body": ["system ${1:WorkspaceSystem} {", "    ${2:ready}: bool;", "", "    fn Start() {", "        self.${2:ready} = false;", "        ${3}", "    }", "", "    fn Update(delta: f64) {", "        ${4}", "    }", "", "    fn Close() {", "        ${5}", "    }", "}"],
+    "description": "Create a stack-resident Wio 0.17 system with ordinary functions."
+  },
+  "Application Lifecycle Attribute": {
+    "prefix": "application-lifecycle",
+    "body": ["[${1|Start,Update,Close|}]", "fn ${2:Handler}(${3}) {", "    ${4}", "}"],
+    "description": "Bind a descriptive function name to an application/system lifecycle role."
   },
   "Function": {
     "prefix": "fn",

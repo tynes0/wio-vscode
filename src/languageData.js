@@ -51,19 +51,26 @@ const ATTRIBUTES = {
   "attribute::Conflicts": "Rejects incompatible effective attributes.",
   "attribute::OnlyWith": "Restricts the effective companion set.",
   "attribute::Before": "Orders a processor before named attributes.",
-  "attribute::After": "Orders a processor after named attributes."
+  "attribute::After": "Orders an attribute processor or application stage after a named dependency.",
+  "Start": "Binds a descriptive application or system function to the start lifecycle.",
+  "Update": "Binds a descriptive application or system function to the per-frame update lifecycle.",
+  "Close": "Binds a descriptive application or system function to the close lifecycle.",
+  "Fixed": "Runs an application stage at a positive fixed frequency.",
+  "After": "Orders an application stage after a named function or system field.",
+  "Main": "Requires an application stage to run on the main thread.",
+  "Worker": "Reserved for conflict-checked worker scheduling; rejected in Wio 0.17."
 };
 
 const DOCS = {
-  application: "Defines the process lifecycle, owned resources, systems, and deterministic schedule.",
-  system: "Defines stack-resident application behavior with ordered lifecycle participation.",
-  resource: "Declares application-owned state that scheduled systems receive explicitly as `ref` or `view`.",
-  schedule: "Defines deterministic staged system update order, executor affinity, and fixed-rate work.",
+  application: "Defines one stack-resident process root. Wio 0.17 uses ordinary fields/functions plus lifecycle and schedule attributes.",
+  system: "Defines stack-resident application behavior using ordinary fields and Start/Update/Close functions.",
+  resource: "Legacy v0.16 spelling for application-owned state used by explicit resource-injection schedules.",
+  schedule: "Legacy v0.16 explicit schedule; new stages use [Fixed], [After], and [Main] on application functions.",
   async: "Marks a function or method as asynchronous.",
   await: "Suspends the current async flow until the awaited operation completes.",
   coroutine: "Defines or names a resumable computation.",
   spawn: "Starts a child task owned by the nearest lexical async scope.",
-  attribute: "Declares a typed user attribute applied with `[Attribute]` or activated with `using`.",
+  attribute: "Declares a typed user attribute applied with `[Attribute]` or activated with `using`; local handler attributes may compose lifecycle and scheduling contracts.",
   extension: "Adds externally implemented member-style behavior to a component or type.",
   with: "Legacy postfix attribute migration input; prefer `[Attribute]`.",
   using: "Applies a compilation-unit or import-oriented attribute.",
