@@ -19,6 +19,11 @@
     "body": ["system ${1:Simulation} {", "    ticks: u64;", "", "    fn Update(delta: f64) {", "        ${2:self.ticks += 1u64;}", "    }", "}", "", "application ${3:DesktopApp} {", "    simulation: ${1:Simulation};", "", "    [Fixed(${4:60})]", "    fn ${5:Physics}(step: f64) {", "        ${6}", "    }", "", "    [After(${5:Physics})]", "    [Main]", "    fn ${7:Render}(delta: f64) {", "        ${8}", "    }", "", "    [Update]", "    fn ${9:Frame}(delta: f64) {", "        ${10}", "    }", "}"],
     "description": "Create an attribute-driven deterministic application schedule."
   },
+  "Composed Application Policy": {
+    "prefix": "application-policy",
+    "body": ["attribute ${1:FrameStep}(rate: f64) for handler", "    compose [Update, Fixed(rate), Main];", "", "[${1:FrameStep}(${2:60.0})]", "fn ${3:Advance}(step: f64) {", "    ${4}", "}"],
+    "description": "Compose reusable Wio 0.17 lifecycle and scheduling policy for an application handler."
+  },
   "Application System": {
     "prefix": "system",
     "body": ["system ${1:WorkspaceSystem} {", "    ${2:ready}: bool;", "", "    fn Start() {", "        self.${2:ready} = false;", "        ${3}", "    }", "", "    fn Update(delta: f64) {", "        ${4}", "    }", "", "    fn Close() {", "        ${5}", "    }", "}"],

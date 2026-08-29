@@ -70,7 +70,7 @@ const DOCS = {
   await: "Suspends the current async flow until the awaited operation completes.",
   coroutine: "Defines or names a resumable computation.",
   spawn: "Starts a child task owned by the nearest lexical async scope.",
-  attribute: "Declares a typed user attribute applied with `[Attribute]` or activated with `using`.",
+  attribute: "Declares a typed user attribute applied with `[Attribute]` or activated with `using`; local handler attributes may compose lifecycle and scheduling contracts.",
   extension: "Adds externally implemented member-style behavior to a component or type.",
   with: "Legacy postfix attribute migration input; prefer `[Attribute]`.",
   using: "Applies a compilation-unit or import-oriented attribute.",
