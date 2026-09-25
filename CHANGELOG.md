@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0
+
+- Aligned extension and compatibility metadata with Wio 0.18.
+- Qualified the existing language, diagnostics, project commands, and
+  application tooling against the Lowered-WIR C++ release backend.
+
 ## 0.17.0
 
 - Aligned extension and compatibility metadata with Wio 0.17.

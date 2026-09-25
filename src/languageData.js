@@ -58,11 +58,11 @@ const ATTRIBUTES = {
   "Fixed": "Runs an application stage at a positive fixed frequency.",
   "After": "Orders an application stage after a named function or system field.",
   "Main": "Requires an application stage to run on the main thread.",
-  "Worker": "Reserved for conflict-checked worker scheduling; rejected in Wio 0.17."
+  "Worker": "Reserved for conflict-checked worker scheduling; rejected in Wio 0.18."
 };
 
 const DOCS = {
-  application: "Defines one stack-resident process root. Wio 0.17 uses ordinary fields/functions plus lifecycle and schedule attributes.",
+  application: "Defines one stack-resident process root. Wio 0.18 uses ordinary fields/functions plus lifecycle and schedule attributes.",
   system: "Defines stack-resident application behavior using ordinary fields and Start/Update/Close functions.",
   resource: "Legacy v0.16 spelling for application-owned state used by explicit resource-injection schedules.",
   schedule: "Legacy v0.16 explicit schedule; new stages use [Fixed], [After], and [Main] on application functions.",
