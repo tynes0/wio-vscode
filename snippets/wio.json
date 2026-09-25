@@ -12,7 +12,7 @@
   "Application": {
     "prefix": "application",
     "body": ["application ${1:DesktopApp} {", "    fn Start() {", "        ${2}", "    }", "", "    fn Update(delta: f64) {", "        ${3}", "    }", "", "    fn Close() {", "        ${4}", "    }", "}"],
-    "description": "Create a Wio 0.17 application with ordinary lifecycle functions."
+    "description": "Create a Wio 0.18 application with ordinary lifecycle functions."
   },
   "Attributed Application Schedule": {
     "prefix": "application-schedule",
@@ -22,12 +22,12 @@
   "Composed Application Policy": {
     "prefix": "application-policy",
     "body": ["attribute ${1:FrameStep}(rate: f64) for handler", "    compose [Update, Fixed(rate), Main];", "", "[${1:FrameStep}(${2:60.0})]", "fn ${3:Advance}(step: f64) {", "    ${4}", "}"],
-    "description": "Compose reusable Wio 0.17 lifecycle and scheduling policy for an application handler."
+    "description": "Compose reusable Wio 0.18 lifecycle and scheduling policy for an application handler."
   },
   "Application System": {
     "prefix": "system",
     "body": ["system ${1:WorkspaceSystem} {", "    ${2:ready}: bool;", "", "    fn Start() {", "        self.${2:ready} = false;", "        ${3}", "    }", "", "    fn Update(delta: f64) {", "        ${4}", "    }", "", "    fn Close() {", "        ${5}", "    }", "}"],
-    "description": "Create a stack-resident Wio 0.17 system with ordinary functions."
+    "description": "Create a stack-resident Wio 0.18 system with ordinary functions."
   },
   "Application Lifecycle Attribute": {
     "prefix": "application-lifecycle",
