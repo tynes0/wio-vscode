@@ -3,7 +3,7 @@
   "displayName": "Wio Language Support",
   "description": "First-class editing, diagnostics, project commands, and navigation for Wio 0.18.",
   "repository": "https://github.com/tynes0/wio-vscode",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "publisher": "local",
   "license": "MIT",
   "main": "./src/extension.js",
