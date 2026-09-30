@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.1
+
+- Aligned extension package metadata with the Wio 0.18.1 Typed WIR hotfix release.
+
 ## 0.18.0
 
 - Aligned extension and compatibility metadata with Wio 0.18.
