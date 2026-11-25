@@ -1,6 +1,6 @@
 # Wio Language Support
 
-The official editing companion for Wio `0.17.x`. The extension follows the
+The official editing companion for Wio `0.19.x`. The extension follows the
 compiler's release line and understands the modern application, async,
 attribute, Unicode `text`, generic, interop, and standard-library surfaces.
 

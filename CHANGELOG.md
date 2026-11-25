@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0
+
+- Align package and compatibility metadata with the Wio 0.19 interim release.
+- Retain manifest-aware project builds/checks and library-file diagnostics.
+- This is a compatibility update, not a VM debugger or a language-server rewrite.
+
 ## 0.18.1
 
 - Aligned extension package metadata with the Wio 0.18.1 Typed WIR hotfix release.
