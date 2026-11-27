@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.4
+
+- Align package metadata with Wio native dependency records; compatibility remains 0.20.x.
+- No editor behavior changes. Adapter cache reuse remains a separate compiler patch.
+
 ## 0.20.3
 
 - Align package metadata with Wio native adapter requirements reports; compatibility remains 0.20.x.
