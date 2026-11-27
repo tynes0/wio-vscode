@@ -1,6 +1,6 @@
 # Wio Language Support
 
-The official editing companion for Wio `0.19.x`. The extension follows the
+The official editing companion for Wio `0.20.x`. The extension follows the
 compiler's release line and understands the modern application, async,
 attribute, Unicode `text`, generic, interop, and standard-library surfaces.
 
@@ -41,8 +41,8 @@ Open the Command Palette and search for **Wio**:
 | Run Environment Doctor | `wio env doctor` | `wio env doctor` |
 | Restart Workspace Index | rebuilds editor navigation data | rebuilds editor navigation data |
 
-The development analysis-only check path requires a matching Wio CLI that
-implements `project check` (not the published 0.19.0 CLI). It never falls back
+The analysis-only check path requires Wio 0.20.x with `project check`
+(not the 0.19.0 CLI). It never falls back
 to a full project build. Checking analyzes the manifest entry/import closure,
 not unrelated unimported source files. C++ header bodies, native template/link
 errors and WIR/backend diagnostics require an explicit build; native-save
