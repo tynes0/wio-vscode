@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.1
+
+- Align package metadata with the Wio VM execution-policy patch; compatibility remains 0.20.x.
+- No diagnostics, build/run command or editor-runtime behavior changes in this package.
+
 ## 0.20.0
 
 - Route project diagnostics and save checks through analysis-only `wio project check`, not a native project build.
