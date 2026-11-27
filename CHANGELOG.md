@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.3
+
+- Align package metadata with Wio native adapter requirements reports; compatibility remains 0.20.x.
+- No editor behavior changes or adapter cache reuse in this release.
+
 ## 0.20.2
 
 - Align package metadata with Wio's bytecode-first VM executable builds; compatibility remains 0.20.x.
