@@ -34,7 +34,7 @@ test("aligns package and release metadata with Wio 0.20", () => {
   const lock = readJson("package-lock.json");
   const release = readJson("release-manifest.json");
 
-  assert.equal(packageJson.version, "0.20.1");
+  assert.equal(packageJson.version, "0.20.2");
   assert.equal(lock.version, packageJson.version);
   assert.equal(lock.packages[""].version, packageJson.version);
   assert.equal(release.version, packageJson.version);

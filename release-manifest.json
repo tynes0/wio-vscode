@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "product": "wio-vscode",
-  "version": "0.20.1",
+  "version": "0.20.2",
   "compatibleWio": "0.20.x",
   "channel": "stable"
 }
