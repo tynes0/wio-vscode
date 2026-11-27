@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.2
+
+- Align package metadata with Wio's bytecode-first VM executable builds; compatibility remains 0.20.x.
+- No editor runtime or diagnostics changes. Native project builds still use the manifest-aware CLI.
+
 ## 0.20.1
 
 - Align package metadata with the Wio VM execution-policy patch; compatibility remains 0.20.x.
