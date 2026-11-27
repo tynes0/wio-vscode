@@ -118,7 +118,7 @@
         "wio.project.checkOnNativeSave": {
           "type": "boolean",
           "default": true,
-          "description": "Rebuild the owning Wio project when a C/C++ source or header is saved."
+          "description": "Reanalyze Wio declarations when a C/C++ source or header is saved. Does not compile C++ or link."
         },
         "wio.project.commandArgs": {
           "type": "array",

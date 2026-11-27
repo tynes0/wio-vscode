@@ -89,11 +89,11 @@ function registerCommands(vscode, context, services) {
 
   async function checkProject(project, options = {}) {
     const plan = planInvocation({ operation: OPERATIONS.CHECK, project, configuration: cli.configuration(options.resourceUri) });
-    status.text = "$(sync~spin) Wio: project build";
+    status.text = "$(sync~spin) Wio: project check";
     const result = await cli.invoke(plan, { key: `diagnostics:${plan.diagnosticScope}`, reveal: options.reveal, resourceUri: options.resourceUri });
     status.text = result.code === 0 ? "$(check) Wio" : "$(error) Wio";
     updateDiagnosticScope(plan.diagnosticScope, result, options.activeFile);
-    if (result.code !== 0 && !options.quiet) vscode.window.showErrorMessage(`Wio project build failed (exit ${result.code}). See the Wio output for details.`);
+    if (result.code !== 0 && !options.quiet) vscode.window.showErrorMessage(`Wio project check failed (exit ${result.code}). See the Wio output for details.`);
     return { ...result, plan };
   }
 

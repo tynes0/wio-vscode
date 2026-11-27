@@ -25,19 +25,20 @@ function requireCompiler(t) {
   return true;
 }
 
-test("manifest-aware check builds a multi-file pure Wio project", (t) => {
+test("manifest-aware check analyzes a multi-file pure Wio project without outputs", (t) => {
   if (!requireCompiler(t)) return;
   const file = path.join(fixtureRoot, "pure-project", "wio", "math.wio");
-  const plan = planInvocation({ operation: OPERATIONS.CHECK, filePath: file, source: fs.readFileSync(file, "utf8"), project: findProjectContext(file), configuration: projectConfiguration });
+  const plan = planInvocation({ operation: OPERATIONS.CHECK, filePath: file, source: fs.readFileSync(file, "utf8"), project: findProjectContext(file), configuration: {} });
   const result = execute(plan);
   assert.equal(result.error, undefined);
   assert.equal(result.code, 0, result.output);
+  assert.doesNotMatch(result.output, /Generated (?:C\+\+|backend) output:/);
 });
 
-test("manifest-aware check resolves C++ headers and native sources", (t) => {
+test("manifest-aware check resolves C++ header declarations without compiling native sources", (t) => {
   if (!requireCompiler(t)) return;
   const file = path.join(fixtureRoot, "native-project", "wio", "native.wio");
-  const plan = planInvocation({ operation: OPERATIONS.CHECK, filePath: file, source: fs.readFileSync(file, "utf8"), project: findProjectContext(file), configuration: projectConfiguration });
+  const plan = planInvocation({ operation: OPERATIONS.CHECK, filePath: file, source: fs.readFileSync(file, "utf8"), project: findProjectContext(file), configuration: {} });
   const result = execute(plan);
   assert.equal(result.error, undefined);
   assert.equal(result.code, 0, result.output);
@@ -64,7 +65,7 @@ test("standalone library check does not require Entry", (t) => {
 test("manifest library project checks without an Entry function", (t) => {
   if (!requireCompiler(t)) return;
   const file = path.join(fixtureRoot, "library-project", "wio", "library.wio");
-  const plan = planInvocation({ operation: OPERATIONS.CHECK, filePath: file, source: fs.readFileSync(file, "utf8"), project: findProjectContext(file), configuration: projectConfiguration });
+  const plan = planInvocation({ operation: OPERATIONS.CHECK, filePath: file, source: fs.readFileSync(file, "utf8"), project: findProjectContext(file), configuration: {} });
   const result = execute(plan);
   assert.equal(result.code, 0, result.output);
 });

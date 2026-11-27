@@ -35,7 +35,8 @@ function planProject(operation, project, configuration) {
   const common = [...(configuration.projectArgs || [])];
   const base = ["project"];
   if (operation === OPERATIONS.CHECK || operation === OPERATIONS.EMIT_CPP) {
-    const args = [...base, "build", "--project", project.manifestPath, ...common];
+    const action = operation === OPERATIONS.CHECK ? "check" : "build";
+    const args = [...base, action, "--project", project.manifestPath, ...common];
     if (operation === OPERATIONS.EMIT_CPP) args.push("--emit-cpp");
     return { mode: "project", operation, args, cwd: project.root, project, diagnosticScope: project.manifestPath };
   }
