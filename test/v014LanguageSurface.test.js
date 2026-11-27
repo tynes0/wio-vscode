@@ -29,19 +29,19 @@ function findNamedPattern(value, name) {
   return undefined;
 }
 
-test("aligns package and release metadata with Wio 0.19", () => {
+test("aligns package and release metadata with Wio 0.20", () => {
   const packageJson = readJson("package.json");
   const lock = readJson("package-lock.json");
   const release = readJson("release-manifest.json");
 
-  assert.equal(packageJson.version, "0.19.0");
+  assert.equal(packageJson.version, "0.20.0");
   assert.equal(lock.version, packageJson.version);
   assert.equal(lock.packages[""].version, packageJson.version);
   assert.equal(release.version, packageJson.version);
-  assert.equal(release.compatibleWio, "0.19.x");
+  assert.equal(release.compatibleWio, "0.20.x");
 });
 
-test("preserves the Wio 0.18 language and std surface in 0.19", () => {
+test("preserves the frozen language and std baseline in 0.20", () => {
   assert.ok(TYPES.includes("text"));
   assert.ok(Object.hasOwn(ATTRIBUTES, "attribute::Processor"));
   assert.ok(Object.hasOwn(ATTRIBUTES, "attribute::Conflicts"));

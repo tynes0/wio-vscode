@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.0
+
+- Route project diagnostics and save checks through analysis-only `wio project check`, not a native project build.
+- Preserve manifest imports/includes and library targets; clarify that native C++ and backend errors require explicit builds.
+- Requires the matching 0.20.x CLI with `project check`; no build fallback on older toolchains.
+
 ## 0.19.0
 
 - Align package and compatibility metadata with the Wio 0.19 interim release.

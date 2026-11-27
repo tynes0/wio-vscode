@@ -27,7 +27,7 @@ test("checks project members through the manifest instead of file mode", () => {
     configuration: {}
   });
   assert.equal(plan.mode, "project");
-  assert.deepEqual(plan.args, ["project", "build", "--project", project.manifestPath]);
+  assert.deepEqual(plan.args, ["project", "check", "--project", project.manifestPath]);
   assert.equal(plan.cwd, project.root);
 });
 
@@ -41,12 +41,23 @@ test("does not leak standalone native flags into manifest project commands", () 
     operation: OPERATIONS.CHECK, filePath: "ignored.wio", source: "", project,
     configuration: { defaultArgs: ["--include-dir", "wrong"], standaloneArgs: ["--backend-arg", "wrong.cpp"], projectArgs: ["--config", "Debug"] }
   });
-  assert.deepEqual(plan.args, ["project", "build", "--project", project.manifestPath, "--config", "Debug"]);
+  assert.deepEqual(plan.args, ["project", "check", "--project", project.manifestPath, "--config", "Debug"]);
 });
 
 test("uses project describe for backend information", () => {
   const plan = planInvocation({ operation: OPERATIONS.BACKEND_INFO, filePath: "ignored.wio", source: "", project, configuration: {} });
   assert.deepEqual(plan.args, ["project", "describe", "--project", project.manifestPath]);
+});
+
+test("VM-selected checks remain analysis-only and do not forward run arguments", () => {
+  const plan = planInvocation({
+    operation: OPERATIONS.CHECK, filePath: "ignored.wio", source: "", project,
+    configuration: { projectArgs: ["--backend", "vm", "--config", "Release"], runArgs: ["--emit-cpp"] }
+  });
+  assert.deepEqual(plan.args, ["project", "check", "--project", project.manifestPath,
+    "--backend", "vm", "--config", "Release"]);
+  assert.equal(plan.args.includes("--emit-cpp"), false);
+  assert.equal(plan.args.includes("--rebuild"), false);
 });
 
 test("uses the manifest-aware project C++ emission command", () => {

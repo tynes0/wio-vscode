@@ -47,7 +47,7 @@ function harness(document) {
   return { handlers, invocations, messages };
 }
 
-test("Check Current File builds the owning manifest project", async (t) => {
+test("Check Current File analyzes the owning manifest project without building", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "wio-vscode-command-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const sourceRoot = path.join(root, "wio");
@@ -61,7 +61,7 @@ test("Check Current File builds the owning manifest project", async (t) => {
   await handlers.get("wio.checkCurrentFile")(uri);
   assert.equal(invocations.length, 1);
   assert.equal(invocations[0].mode, "project");
-  assert.deepEqual(invocations[0].args.slice(0, 3), ["project", "build", "--project"]);
+  assert.deepEqual(invocations[0].args.slice(0, 3), ["project", "check", "--project"]);
 });
 
 test("Run Current File refuses a manifest-free library instead of reporting a fake Entry error", async (t) => {
